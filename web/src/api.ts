@@ -120,6 +120,18 @@ export async function getScan(id: string): Promise<ScanJob> {
   return r.json();
 }
 
+export async function deletePath(id: string, path: string): Promise<void> {
+  const r = await fetch(`/api/scans/${id}/delete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path, confirm: true }),
+  });
+  if (!r.ok) {
+    const e = await r.json();
+    throw new Error(e.error || "delete failed");
+  }
+}
+
 export async function openPath(id: string, path: string): Promise<void> {
   const r = await fetch(`/api/scans/${id}/open`, {
     method: "POST",

@@ -1,0 +1,4 @@
+- [x] Delete API with PathWithinRoot and confirm flag
+- [x] Block delete of scan root
+- [x] UI Delete on cleanup rows with confirm dialog
+- [x] Unit tests for DeletePath

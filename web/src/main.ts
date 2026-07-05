@@ -1,6 +1,7 @@
 import {
   cancelScan,
   connectEvents,
+  deletePath,
   expandScan,
   fetchRoots,
   findNode,
@@ -134,6 +135,26 @@ async function refreshJob() {
   renderUI();
 }
 
+function makeDeleteBtn(path: string, label: string): HTMLButtonElement {
+  const btn = document.createElement("button");
+  btn.textContent = "Delete";
+  btn.className = "link-btn danger";
+  btn.type = "button";
+  btn.onclick = async (e) => {
+    e.stopPropagation();
+    if (!scanId) return;
+    const msg = `Delete permanently?\n\n${path}\n\n${label}`;
+    if (!confirm(msg)) return;
+    try {
+      await deletePath(scanId, path);
+      await refreshJob();
+    } catch (err) {
+      alert(String(err));
+    }
+  };
+  return btn;
+}
+
 function makeOpenBtn(path: string): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.textContent = "Open";
@@ -230,6 +251,8 @@ function renderInsights() {
     tr.innerHTML = `<td><span class="badge-cat">${escapeHtml(c.category)}</span></td><td>${escapeHtml(c.path)}</td><td>${formatBytes(c.size)}</td><td>${escapeHtml(c.hint)}</td>`;
     const openTd = document.createElement("td");
     openTd.appendChild(makeOpenBtn(c.path));
+    openTd.appendChild(document.createTextNode(" "));
+    openTd.appendChild(makeDeleteBtn(c.path, `${c.category}: ${formatBytes(c.size)}`));
     tr.appendChild(openTd);
     tr.onclick = () => selectPath(c.path, true);
     cleanupBody.appendChild(tr);

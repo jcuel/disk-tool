@@ -63,6 +63,7 @@ On Linux/macOS use `make build` if Make is available.
 | WS | `/api/scans/{id}/events` | Progress + expand events |
 | GET | `/api/scans/{id}/export?format=json\|html\|ticket` | Export report |
 | POST | `/api/scans/{id}/open` | Open path in OS file manager `{ "path": "..." }` |
+| POST | `/api/scans/{id}/delete` | Delete path under scan root `{ "path": "...", "confirm": true }` |
 
 ## CI and smoke tests
 

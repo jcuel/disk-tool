@@ -38,6 +38,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/scans/{id}/events", s.handleScanEvents)
 	mux.HandleFunc("GET /api/scans/{id}/export", s.handleExport)
 	mux.HandleFunc("POST /api/scans/{id}/open", s.handleOpenPath)
+	mux.HandleFunc("POST /api/scans/{id}/delete", s.handleDeletePath)
 	if s.static != nil {
 		mux.Handle("/", s.static)
 	}
@@ -185,6 +186,46 @@ func (s *Server) handleOpenPath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "opened", "path": abs})
+}
+
+func (s *Server) handleDeletePath(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	job, ok := s.store.Get(id)
+	if !ok {
+		writeError(w, http.StatusNotFound, "scan not found")
+		return
+	}
+	var req struct {
+		Path    string `json:"path"`
+		Confirm bool   `json:"confirm"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	if !req.Confirm {
+		writeError(w, http.StatusBadRequest, errConfirmRequired.Error())
+		return
+	}
+	req.Path = SanitizePath(req.Path)
+	if req.Path == "" {
+		writeError(w, http.StatusBadRequest, "path is required")
+		return
+	}
+	abs, err := PathWithinRoot(job.Root, req.Path)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if abs == job.Root {
+		writeError(w, http.StatusBadRequest, "cannot delete scan root")
+		return
+	}
+	if err := DeletePath(abs); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted", "path": abs})
 }
 
 func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {
