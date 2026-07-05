@@ -19,11 +19,16 @@ function waitForOverviewReady(): void {
   cy.get("#insights-summary").should("not.contain", "Run an overview scan");
 }
 
+function sanitizeScreenshotName(name: string): string {
+  return name.replace(/[^\w-]+/g, "-");
+}
+
 declare global {
   namespace Cypress {
     interface Chainable {
       visitWithScan(root: string, noAutoScan?: boolean): Chainable<void>;
       waitForOverviewReady(): Chainable<void>;
+      captureStep(name: string, options?: Partial<Cypress.ScreenshotOptions>): Chainable<void>;
     }
   }
 }
@@ -34,4 +39,9 @@ Cypress.Commands.add("visitWithScan", (root: string, noAutoScan = false) => {
 
 Cypress.Commands.add("waitForOverviewReady", () => {
   waitForOverviewReady();
+});
+
+Cypress.Commands.add("captureStep", (name: string, options?: Partial<Cypress.ScreenshotOptions>) => {
+  const safe = sanitizeScreenshotName(name);
+  cy.screenshot(safe, { capture: "viewport", overwrite: true, ...options });
 });

@@ -7,6 +7,7 @@ describe("overview scan", () => {
     cy.waitForOverviewReady();
     cy.get("#insights-summary").should("not.contain", "Run an overview scan");
     cy.get("#tree-table tbody tr.clickable").first().should("contain", "big-dir");
+    cy.captureStep("01-overview-ready");
   });
 
   it("starts scan manually when noAutoScan is set", () => {
@@ -15,5 +16,6 @@ describe("overview scan", () => {
     cy.get("#path-input").should("have.value", root);
     cy.get("#start-btn").should("not.be.disabled").click();
     cy.waitForOverviewReady();
+    cy.captureStep("02-manual-scan-start");
   });
 });

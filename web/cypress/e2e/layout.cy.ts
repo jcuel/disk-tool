@@ -19,5 +19,6 @@ describe("layout", () => {
         expect(insW).to.be.greaterThan(layoutW * 0.9);
       });
     });
+    cy.captureStep("04-layout-full", { capture: "fullPage" });
   });
 });
