@@ -61,9 +61,10 @@ On Linux/macOS use `make build` if Make is available.
 | DELETE | `/api/scans/{id}` | Cancel overview scan |
 | POST | `/api/scans/{id}/expand` | Drill into folder `{ "path": "...", "depth": 5 }` |
 | WS | `/api/scans/{id}/events` | Progress + expand events |
-| GET | `/api/scans/{id}/export?format=json\|html\|ticket` | Export report |
+| GET | `/api/scans/{id}/export?format=json\|html\|ticket\|cleanup-json\|cleanup-html\|cleanup-ticket` | Export scan or cleanup report |
 | POST | `/api/scans/{id}/open` | Open path in OS file manager `{ "path": "..." }` |
 | POST | `/api/scans/{id}/delete` | Delete path under scan root `{ "path": "...", "confirm": true }` |
+| POST | `/api/scans/{id}/cleanup` | Bulk cleanup dry-run or execute `{ "paths": [...], "dryRun": true, "confirm": false }` |
 
 ## CI and smoke tests
 

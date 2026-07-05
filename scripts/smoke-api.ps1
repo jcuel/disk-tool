@@ -55,6 +55,20 @@ try {
     if ($ticket.Content -notmatch "Disk usage report") { throw "ticket export failed" }
     Write-Host "OK export ticket"
 
+    $smokeDir = Join-Path $Root ".smoke-cleanup-$PID"
+    New-Item -ItemType Directory -Force -Path (Join-Path $smokeDir "nested") | Out-Null
+    Set-Content -Path (Join-Path $smokeDir "nested\file.txt") -Value "test"
+    $cleanupBody = @{
+        paths = @((Join-Path $smokeDir "nested"))
+        dryRun = $true
+        confirm = $false
+        confirmPhrase = ""
+    } | ConvertTo-Json
+    $cleanup = Invoke-RestMethod -Method POST -Uri "$Base/api/scans/$scanId/cleanup" -ContentType "application/json" -Body $cleanupBody
+    if ($cleanup.results[0].status -ne "would_delete") { throw "cleanup dry-run failed" }
+    Remove-Item -Recurse -Force $smokeDir -ErrorAction SilentlyContinue
+    Write-Host "OK POST /api/scans/{id}/cleanup dry-run"
+
     $ui = Invoke-WebRequest "$Base/" -UseBasicParsing
     if ($ui.StatusCode -ne 200) { throw "UI status $($ui.StatusCode)" }
     Write-Host "OK UI /"

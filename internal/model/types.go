@@ -57,8 +57,9 @@ type ScanJob struct {
 	DirsScanned  int64       `json:"dirsScanned"`
 	FilesScanned int64       `json:"filesScanned"`
 	BytesScanned int64       `json:"bytesScanned"`
-	CurrentPath  string          `json:"currentPath"`
-	Insights     *InsightsReport `json:"insights,omitempty"`
+	CurrentPath       string          `json:"currentPath"`
+	Insights          *InsightsReport `json:"insights,omitempty"`
+	LastCleanupReport *CleanupReport  `json:"lastCleanupReport,omitempty"`
 }
 
 type ScanResponse struct {

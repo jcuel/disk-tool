@@ -65,6 +65,16 @@ fi
 curl -sf "$BASE/api/scans/$SCAN_ID/export?format=ticket" | grep -q 'Disk usage report'
 echo "OK export ticket"
 
+SMOKE_DIR="$ROOT/.smoke-cleanup-$$"
+mkdir -p "$SMOKE_DIR/nested"
+echo test > "$SMOKE_DIR/nested/file.txt"
+CLEANUP_JSON=$(curl -sf -X POST "$BASE/api/scans/$SCAN_ID/cleanup" \
+  -H 'Content-Type: application/json' \
+  -d "{\"paths\":[\"$SMOKE_DIR/nested\"],\"dryRun\":true,\"confirm\":false,\"confirmPhrase\":\"\"}")
+echo "$CLEANUP_JSON" | grep -q 'would_delete'
+rm -rf "$SMOKE_DIR"
+echo "OK POST /api/scans/{id}/cleanup dry-run"
+
 CODE=$(curl -sf -o /dev/null -w '%{http_code}' "$BASE/")
 [[ "$CODE" == "200" ]] || { echo "UI status $CODE" >&2; exit 1; }
 echo "OK UI /"

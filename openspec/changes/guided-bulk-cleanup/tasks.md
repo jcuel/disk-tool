@@ -1,0 +1,5 @@
+- [x] Model + CleanupReport text builder
+- [x] POST /api/scans/{id}/cleanup + lock preflight + tests
+- [x] Export formats cleanup-json, cleanup-html, cleanup-ticket
+- [x] UI multi-select, modals, report panel
+- [x] Smoke test + testing-report.md
