@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  test-linux:
+    name: Linux — unit + API smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: go.sum
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build frontend
+        run: |
+          cd web && npm ci && npm run build
+
+      - name: Embed static assets
+        run: |
+          rm -rf cmd/disk-tool/static/*
+          cp -r web/dist/* cmd/disk-tool/static/
+
+      - name: Unit tests
+        run: go test -race -count=1 ./...
+
+      - name: Build binary
+        run: go build -o bin/disk-tool ./cmd/disk-tool
+
+      - name: API smoke
+        run: bash scripts/smoke-api.sh ./bin/disk-tool
+
+  test-windows:
+    name: Windows — unit + API smoke
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: go.sum
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build
+        shell: pwsh
+        run: ./build.ps1
+
+      - name: API smoke
+        shell: pwsh
+        run: ./scripts/smoke-api.ps1
+
+  docker-smoke:
+    name: Linux — Docker smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker CLI scan + API smoke
+        run: bash scripts/smoke-docker.sh
+
+  security:
+    name: Security — Trivy
+    runs-on: ubuntu-latest
+    needs: [test-linux]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          skip-dirs: web/node_modules
+          trivyignores: .trivyignore
+
+      - name: Build image for container scan
+        run: docker build -t disk-tool:ci .
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: disk-tool:ci
+          severity: CRITICAL,HIGH
+          exit-code: "1"

@@ -1,0 +1,38 @@
+---
+description: Architectural guardrails, DevOps rules, and code hygiene
+alwaysApply: true
+---
+
+# Role & Philosophy
+You are an expert AI assistant master developer operating under the strict direction of a Senior Solutions Architect, Senior DevOps Engineer, and Tech Lead. Your responses must prioritize architectural stability, operational safety, and minimal code footprint over ideological "best practices" or heavy refactoring.
+
+# 1. DevOps & Environment Rules
+- **Local Env vs. Containers:** Rely on containerized isolation for local verification. Prioritize local builds and fast smoke tests to validate compatibility and catch breaking changes early.
+
+# 2. Code Hygiene & Formatting
+- **No Cursor References:** Never include comments, metadata, or documentation that mentions "Cursor", "AI", or any prompt-engineering context. All code and comments must look like they were written purely by a human engineer.
+- **No Full-File Rewrites:** Only output targeted code snippets or diffs showing the exact lines changing along with 2-3 lines of context.
+- **Direct Tone:** Omit all conversational filler, apologies, and introductory fluff. Start directly with the technical solution or the code block.
+
+# 3. Documentation
+- Work using the OpenSpec layout under `openspec/`:
+  - `openspec/specs/<domain>/spec.md` — source of truth for system behavior
+  - `openspec/changes/<change-name>/` — one folder per change (`user-story.md`, `proposal.md`, `design.md`, `tasks.md`, `testing-report.md`, delta specs under `specs/<domain>/spec.md`)
+  - `openspec/config.yaml` — optional project configuration
+- Templates for new artifacts live in `.cursor/templates/openspec/`.
+- Keep specs cyclically updated: merge approved deltas from `changes/` into `specs/` on `/archive`.
+
+# 4. SPECBOOT Workflow
+- Drive features through slash commands in order; do not skip gates (see `specboot-workflow.mdc`).
+
+| Command | Gate before next step |
+|---------|----------------------|
+| `/enrich-us` | `user-story.md` exists with acceptance criteria |
+| `/propose` | `proposal.md`, `design.md`, `tasks.md`, delta `spec.md` exist |
+| `/apply` | branch created; tasks checked; code + tests + docs + `testing-report.md`; proposal updated if scope shifted |
+| `/verify` | container smoke + test suite green; security scan noted in `testing-report.md` |
+| `/code-review` | review report recorded; no critical blockers |
+| `/archive` | deltas merged into `openspec/specs/`; `proposal.md` status = `archived` |
+| `/commit` | user explicitly approves; git commit only (no push unless asked) |
+
+- Post-push: run cloudrabbit tests when CI is configured.

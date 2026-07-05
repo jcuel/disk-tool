@@ -1,0 +1,30 @@
+---
+description: SPECBOOT stage detection and command gate enforcement
+alwaysApply: true
+---
+
+# SPECBOOT Workflow State Machine
+
+Infer the current stage from artifacts in `openspec/changes/<change-name>/`:
+
+| Stage | Artifacts present | Next command |
+|-------|-------------------|--------------|
+| Start | none | `/enrich-us` |
+| Enriched | `user-story.md` only | `/propose` |
+| Proposed | + `proposal.md`, `design.md`, `tasks.md`, delta spec | `/apply` |
+| Applying | branch + partial tasks | `/apply` (loop) or `/verify` when tasks done |
+| Verifying | all tasks checked + `testing-report.md` | `/verify` |
+| Reviewing | verify checklist complete, summary not ready | `/code-review` |
+| Archiving | review complete, summary `ready` | `/archive` |
+| Committing | `proposal.md` status = `archived` | `/commit` |
+
+## Gate Enforcement
+
+- Do not run `/propose` without `user-story.md`.
+- Do not run `/apply` without proposal artifacts and delta spec.
+- Do not run `/verify` before implementation tasks are complete.
+- Do not run `/code-review` before verify checklist is filled.
+- Do not run `/archive` while critical review blockers exist.
+- Do not run `/commit` without explicit user approval.
+
+When the user invokes a command out of order, state the current stage and the required prerequisite command.

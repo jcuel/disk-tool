@@ -1,0 +1,15 @@
+services:
+  smoke:
+    build: .
+    volumes:
+      - .:/data/src:ro
+    command: ["scan", "/data/src", "--json"]
+
+  smoke-api:
+    build: .
+    entrypoint: ["/bin/sh", "/scripts/smoke-in-container.sh"]
+    volumes:
+      - .:/data/src:ro
+    environment:
+      SMOKE_PORT: "18080"
+      SMOKE_ROOT: /data/src

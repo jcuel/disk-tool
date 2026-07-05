@@ -1,0 +1,4 @@
+# Project configuration (optional)
+project: disk-tool
+domain: disk-tool
+version: 0.1.0
