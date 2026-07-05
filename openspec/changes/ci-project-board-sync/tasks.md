@@ -1,0 +1,5 @@
+- [x] Refactor `scripts/sync-project-board.sh` (env config, dynamic proposal match)
+- [x] Add `scripts/project-board.env` and thin `sync-project-board.ps1` wrapper
+- [x] Add `.github/workflows/sync-project-board.yml` (workflow_run after CI)
+- [x] Document secret setup in `.github/PROJECT.md`
+- [x] Update SPECBOOT workflow note (auto-sync on merge)

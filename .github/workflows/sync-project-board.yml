@@ -1,0 +1,34 @@
+name: Sync project board
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [master, main]
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Sync project board
+    runs-on: ubuntu-latest
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync board after merge
+        env:
+          GH_TOKEN: ${{ secrets.GH_PROJECT_SYNC }}
+        run: |
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "GH_PROJECT_SYNC secret not set — skipping project board sync."
+            echo "Add a PAT with project + read:project scopes. See .github/PROJECT.md"
+            exit 0
+          fi
+          set -a
+          source scripts/project-board.env
+          set +a
+          bash scripts/sync-project-board.sh
