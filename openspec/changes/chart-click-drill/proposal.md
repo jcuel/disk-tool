@@ -1,13 +1,19 @@
-# Chart click drill-down
+# Proposal: Chart click drill-down and layout balance
 
-## Problem
-Clicking folders in the Distribution treemap or bar chart did not select the path or trigger expand/scan.
+**Change:** chart-click-drill
+**Status:** in-review
 
-## Cause
-ECharts `setOption` merge dropped custom `path` fields on series data; bar series lacked `triggerEvent`, so clicks were not emitted reliably.
+## Summary
 
-## Fix
-- Full option replace (`notMerge: true`) on chart updates
-- `triggerEvent: true` on treemap and bar series (and bar y-axis)
-- `resolveChildPath` helper with fallbacks by `data.path`, label name, and `dataIndex`
-- Pointer cursor on chart containers
+Fix Distribution chart clicks so they drill into folders like tree rows. Balance the main grid: equal tree/chart columns, full-width Insights, scan placeholders during overview.
+
+## Scope
+
+- `web/src/charts.ts` — click path resolution, ECharts `triggerEvent`, `notMerge`
+- `web/src/main.ts` — scan placeholders, chart `needsExpand` parity with tree
+- `web/src/styles.css` — grid column balance, remove tree `70vh` cap, Insights span
+- Embedded static assets rebuild
+
+## Cause (chart clicks)
+
+ECharts `setOption` merge dropped custom `path` on series data; bar series lacked reliable click events without `triggerEvent`.
