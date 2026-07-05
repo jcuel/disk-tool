@@ -39,6 +39,23 @@ Post a short comment when status changes:
 
 On PR open, link the PR. On merge, note `/archive` and close.
 
+## Sync board with issues
+
+Project **Status** can drift when issues close via merged PRs. Reconcile after merges:
+
+```powershell
+./scripts/sync-project-board.ps1
+```
+
+```bash
+bash scripts/sync-project-board.sh
+```
+
+- Closed issues on the board → **Done**
+- Open issues with `openspec/changes/<change>/proposal.md` still in **Backlog** → **Ready**
+
+Requires `gh` with `project` scope. Run from repo root.
+
 ## Recommended views (create in UI)
 
 GitHub does not expose view creation in the stable API — add these tabs manually (**New view** on the project):
