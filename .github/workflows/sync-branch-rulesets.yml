@@ -1,0 +1,25 @@
+name: Sync branch rulesets
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - .github/rulesets/**
+      - .github/workflows/branch-policy.yml
+      - .github/workflows/sync-branch-rulesets.yml
+      - scripts/apply-branch-rulesets.sh
+
+permissions:
+  administration: write
+
+jobs:
+  sync:
+    name: Sync branch rulesets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply rulesets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/apply-branch-rulesets.sh
