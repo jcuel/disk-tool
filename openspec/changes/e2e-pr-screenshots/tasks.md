@@ -8,5 +8,5 @@
 - [x] 4 screenshot calls in Cypress specs
 - [x] CI artifact upload + PR comment steps
 - [x] README note
-- [ ] testing-report.md on PR CI green
+- [x] testing-report.md on PR CI green
 - [ ] archive delta into canonical spec
