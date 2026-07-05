@@ -69,8 +69,8 @@ Pipeline: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 
 | Job | Environment | Checks |
 |-----|-------------|--------|
-| `test-linux` | ubuntu-latest | `go test`, build, [`scripts/smoke-api.sh`](scripts/smoke-api.sh) |
-| `test-windows` | windows-latest | `build.ps1`, [`scripts/smoke-api.ps1`](scripts/smoke-api.ps1) |
+| `test-linux` | ubuntu-latest | `go test`, govulncheck, build, [`scripts/smoke-api.sh`](scripts/smoke-api.sh) |
+| `test-windows` | windows-latest | `build.ps1`, govulncheck, [`scripts/smoke-api.ps1`](scripts/smoke-api.ps1) |
 | `docker-smoke` | ubuntu + Docker | CLI scan + in-container API smoke |
 | `security` | Trivy | Filesystem + container image (CRITICAL/HIGH) |
 

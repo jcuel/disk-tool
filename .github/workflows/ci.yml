@@ -39,6 +39,9 @@ jobs:
       - name: Unit tests
         run: go test -race -count=1 ./...
 
+      - name: Govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
       - name: Build binary
         run: go build -o bin/disk-tool ./cmd/disk-tool
 
@@ -65,6 +68,10 @@ jobs:
       - name: Build
         shell: pwsh
         run: ./build.ps1
+
+      - name: Govulncheck
+        shell: pwsh
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
       - name: API smoke
         shell: pwsh
