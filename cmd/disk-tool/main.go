@@ -69,15 +69,12 @@ func runServe(args []string) {
 }
 
 func runScan(args []string) {
-	fs := flag.NewFlagSet("scan", flag.ExitOnError)
-	asJSON := fs.Bool("json", false, "output JSON")
-	full := fs.Bool("full", false, "scan entire tree (default: overview only)")
-	_ = fs.Parse(args)
-	if fs.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, "scan requires a path")
+	flags, err := parseScanArgs(args)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	root, err := api.ValidateRoot(fs.Arg(0))
+	root, err := api.ValidateRoot(flags.path)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -86,7 +83,7 @@ func runScan(args []string) {
 	opts := scanner.Options{Root: root}
 	var tree *model.ScanNode
 	var largest []model.FileEntry
-	if *full {
+	if flags.full {
 		tree, largest, err = sc.Scan(context.Background(), opts)
 	} else {
 		tree, largest, err = sc.ScanOverview(context.Background(), opts)
@@ -95,19 +92,19 @@ func runScan(args []string) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	if *asJSON {
+	if flags.json {
 		out := map[string]any{
 			"root":         root,
 			"tree":         tree,
 			"largestFiles": largest,
-			"mode":         map[bool]string{true: "full", false: "overview"}[*full],
+			"mode":         map[bool]string{true: "full", false: "overview"}[flags.full],
 		}
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		_ = enc.Encode(out)
 		return
 	}
-	fmt.Printf("Scanned %s (%s): %d bytes, %d files\n", root, map[bool]string{true: "full", false: "overview"}[*full], tree.Size, tree.FileCount)
+	fmt.Printf("Scanned %s (%s): %d bytes, %d files\n", root, map[bool]string{true: "full", false: "overview"}[flags.full], tree.Size, tree.FileCount)
 }
 
 func openBrowser(url string) {
