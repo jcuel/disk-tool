@@ -110,6 +110,22 @@ export async function fetchRoots(): Promise<string[]> {
   return j.roots as string[];
 }
 
+export interface DiskInfo {
+  path: string;
+  total: number;
+  free: number;
+  used: number;
+}
+
+export async function fetchDisk(path: string): Promise<DiskInfo> {
+  const r = await fetch(`/api/disk?path=${encodeURIComponent(path)}`);
+  if (!r.ok) {
+    const e = await r.json();
+    throw new Error(e.error || "disk info failed");
+  }
+  return r.json();
+}
+
 export async function startScan(root: string): Promise<string> {
   const r = await fetch("/api/scans", {
     method: "POST",

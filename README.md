@@ -56,6 +56,7 @@ On Linux/macOS use `make build` if Make is available.
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/roots` | Common scan roots |
+| GET | `/api/disk?path=...` | Volume capacity, used, and free bytes |
 | POST | `/api/scans` | Start scan `{ "root": "..." }` |
 | GET | `/api/scans/{id}` | Scan status and tree |
 | DELETE | `/api/scans/{id}` | Cancel overview scan |

@@ -3,6 +3,7 @@ import {
   connectEvents,
   deletePath,
   expandScan,
+  fetchDisk,
   fetchRoots,
   findNode,
   formatBytes,
@@ -15,7 +16,7 @@ import {
   type ScanJob,
   type ScanNode,
 } from "./api";
-import { initCharts, pct, renderCharts } from "./charts";
+import { initCharts, pct, renderCharts, renderDiskPie } from "./charts";
 import "./styles.css";
 
 const app = document.getElementById("app")!;
@@ -42,6 +43,18 @@ app.innerHTML = `
     <div class="progress-bar"><div id="progress-fill"></div></div>
     <span id="progress-text"></span>
   </div>
+</section>
+<section class="disk-summary panel" id="disk-summary">
+  <div class="disk-summary-text">
+    <h2>Disk capacity</h2>
+    <dl id="disk-stats" class="disk-stats">
+      <dt>Volume</dt><dd id="disk-volume">—</dd>
+      <dt>Capacity</dt><dd id="disk-capacity">—</dd>
+      <dt>Used</dt><dd id="disk-used">—</dd>
+      <dt>Free</dt><dd id="disk-free">—</dd>
+    </dl>
+  </div>
+  <div id="disk-pie" class="chart disk-pie-chart"></div>
 </section>
 <main class="layout">
   <section class="panel tree-panel">
@@ -78,7 +91,7 @@ app.innerHTML = `
     <h2>Largest files</h2>
     <p class="hint">Updated as you drill into folders</p>
     <table id="files-table">
-      <thead><tr><th>Path</th><th>Size</th><th></th></tr></thead>
+      <thead><tr><th>Path</th><th>Size</th><th>Actions</th></tr></thead>
       <tbody></tbody>
     </table>
   </section>
@@ -104,6 +117,10 @@ const copyTicket = document.getElementById("copy-ticket") as HTMLButtonElement;
 const progressEl = document.getElementById("progress")!;
 const progressFill = document.getElementById("progress-fill")!;
 const progressText = document.getElementById("progress-text")!;
+const diskVolume = document.getElementById("disk-volume")!;
+const diskCapacity = document.getElementById("disk-capacity")!;
+const diskUsed = document.getElementById("disk-used")!;
+const diskFree = document.getElementById("disk-free")!;
 const treeBody = document.querySelector("#tree-table tbody")!;
 const filesBody = document.querySelector("#files-table tbody")!;
 const cleanupBody = document.querySelector("#cleanup-table tbody")!;
@@ -140,20 +157,54 @@ let pendingDryRun: CleanupReport | null = null;
 
 initCharts(
   document.getElementById("treemap")!,
-  document.getElementById("barchart")!
+  document.getElementById("barchart")!,
+  document.getElementById("disk-pie")!
 );
 
-fetchRoots().then((roots) => {
+async function loadDiskSummary(path: string) {
+  const root = path.trim();
+  if (!root) return;
+  try {
+    const info = await fetchDisk(root);
+    diskVolume.textContent = info.path;
+    diskCapacity.textContent = formatBytes(info.total);
+    diskUsed.textContent = `${formatBytes(info.used)} (${pct(info.used, info.total)}%)`;
+    diskFree.textContent = `${formatBytes(info.free)} (${pct(info.free, info.total)}%)`;
+    renderDiskPie(info.free, info.used);
+  } catch {
+    diskVolume.textContent = root;
+    diskCapacity.textContent = "—";
+    diskUsed.textContent = "—";
+    diskFree.textContent = "—";
+  }
+}
+
+function pickDefaultRoot(roots: string[]): string {
+  const drive = roots.find((r) => /^[A-Za-z]:[\\/]?$/.test(r) || /^[A-Za-z]:\\/.test(r));
+  return drive || roots[0] || "";
+}
+
+fetchRoots().then(async (roots) => {
   for (const r of roots) {
     const opt = document.createElement("option");
     opt.value = r;
     opt.textContent = r;
     rootsSelect.appendChild(opt);
   }
+  const defaultRoot = pickDefaultRoot(roots);
+  if (defaultRoot) {
+    pathInput.value = defaultRoot;
+    rootsSelect.value = defaultRoot;
+    await loadDiskSummary(defaultRoot);
+    void beginScan(defaultRoot);
+  }
 });
 
 rootsSelect.onchange = () => {
-  if (rootsSelect.value) pathInput.value = rootsSelect.value;
+  if (rootsSelect.value) {
+    pathInput.value = rootsSelect.value;
+    void loadDiskSummary(rootsSelect.value);
+  }
 };
 
 function setProgress(
@@ -210,7 +261,44 @@ function makeOpenBtn(path: string): HTMLButtonElement {
   return btn;
 }
 
+function renderLargestFiles() {
+  filesBody.innerHTML = "";
+  const files = job?.largestFiles || [];
+  if (files.length === 0) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="3" class="muted">No large files indexed yet — drill into folders</td>`;
+    filesBody.appendChild(tr);
+    return;
+  }
+  for (const f of files) {
+    const tr = document.createElement("tr");
+    const pathTd = document.createElement("td");
+    pathTd.className = "path-cell";
+    pathTd.title = f.path;
+    const nameEl = document.createElement("div");
+    nameEl.className = "file-name";
+    nameEl.textContent = f.name;
+    const pathEl = document.createElement("div");
+    pathEl.className = "file-path";
+    pathEl.textContent = f.path;
+    pathTd.appendChild(nameEl);
+    pathTd.appendChild(pathEl);
+    tr.appendChild(pathTd);
+    const sizeTd = document.createElement("td");
+    sizeTd.textContent = formatBytes(f.size);
+    tr.appendChild(sizeTd);
+    const actionsTd = document.createElement("td");
+    actionsTd.className = "actions-cell";
+    actionsTd.appendChild(makeOpenBtn(f.path));
+    actionsTd.appendChild(document.createTextNode(" "));
+    actionsTd.appendChild(makeDeleteBtn(f.path, `${f.name}: ${formatBytes(f.size)}`));
+    tr.appendChild(actionsTd);
+    filesBody.appendChild(tr);
+  }
+}
+
 function renderUI() {
+  renderLargestFiles();
   if (!job?.tree) return;
   const node = selectedPath ? findNode(job.tree, selectedPath) : job.tree;
   if (!node) return;
@@ -256,16 +344,6 @@ function renderUI() {
   renderCharts(node, (p) => selectPath(p, true));
 
   renderInsights();
-
-  filesBody.innerHTML = "";
-  for (const f of job.largestFiles || []) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${escapeHtml(f.path)}</td><td>${formatBytes(f.size)}</td>`;
-    const openTd = document.createElement("td");
-    openTd.appendChild(makeOpenBtn(f.path));
-    tr.appendChild(openTd);
-    filesBody.appendChild(tr);
-  }
 }
 
 function renderInsights() {
@@ -566,6 +644,12 @@ function escapeHtml(s: string): string {
 startBtn.onclick = async () => {
   const root = pathInput.value.trim();
   if (!root) return;
+  await beginScan(root);
+};
+
+async function beginScan(root: string) {
+  pathInput.value = root;
+  void loadDiskSummary(root);
   startBtn.disabled = true;
   cancelBtn.disabled = false;
   exportJson.disabled = true;
@@ -574,6 +658,7 @@ startBtn.onclick = async () => {
   copyTicket.disabled = true;
   job = null;
   selectedPath = null;
+  renderLargestFiles();
   try {
     scanId = await startScan(root);
     ws?.close();

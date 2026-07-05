@@ -50,15 +50,16 @@ func PathWithinRoot(root, target string) (string, error) {
 
 func CommonRoots() []string {
 	var roots []string
+	if vol := os.Getenv("SystemDrive"); vol != "" {
+		roots = append(roots, vol+string(os.PathSeparator))
+	}
 	if home, err := os.UserHomeDir(); err == nil {
 		roots = append(roots, home)
 	}
 	if wd, err := os.Getwd(); err == nil {
 		roots = append(roots, wd)
 	}
-	if vol := os.Getenv("SystemDrive"); vol != "" {
-		roots = append(roots, vol+string(os.PathSeparator))
-	} else {
+	if len(roots) == 0 {
 		roots = append(roots, string(os.PathSeparator))
 	}
 	seen := map[string]bool{}
