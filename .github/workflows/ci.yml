@@ -118,6 +118,10 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      - name: Prepare git for screenshot branch upload
+        if: github.event_name == 'pull_request' && always()
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Comment PR with inline screenshots
         id: inline-screenshots
         if: github.event_name == 'pull_request' && always()
@@ -126,8 +130,6 @@ jobs:
         with:
           images: "web/cypress/screenshots/**/*.png"
           upload_to: github_branch
-          custom_attachment_msg: "E2E UI snapshots (run ${{ github.run_id }})"
-          edit_previous_comment: true
 
       - name: Fallback PR comment (artifact link)
         if: github.event_name == 'pull_request' && always() && steps.inline-screenshots.outcome != 'success'
