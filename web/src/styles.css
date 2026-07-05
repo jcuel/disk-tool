@@ -225,9 +225,41 @@ button:disabled {
 }
 
 .path-cell {
-  word-break: break-all;
-  max-width: 0;
-  min-width: 120px;
+  min-width: 12rem;
+  max-width: 28rem;
+}
+
+.file-name {
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.file-path {
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+#files-table {
+  table-layout: fixed;
+}
+
+#files-table th:nth-child(1),
+#files-table td:nth-child(1) {
+  width: 58%;
+}
+
+#files-table th:nth-child(2),
+#files-table td:nth-child(2) {
+  width: 14%;
+  white-space: nowrap;
+}
+
+#files-table th:nth-child(3),
+#files-table td:nth-child(3) {
+  width: 28%;
 }
 
 .actions-cell {

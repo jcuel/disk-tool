@@ -263,8 +263,16 @@ function renderLargestFiles() {
   for (const f of files) {
     const tr = document.createElement("tr");
     const pathTd = document.createElement("td");
-    pathTd.textContent = f.path;
     pathTd.className = "path-cell";
+    pathTd.title = f.path;
+    const nameEl = document.createElement("div");
+    nameEl.className = "file-name";
+    nameEl.textContent = f.name;
+    const pathEl = document.createElement("div");
+    pathEl.className = "file-path";
+    pathEl.textContent = f.path;
+    pathTd.appendChild(nameEl);
+    pathTd.appendChild(pathEl);
     tr.appendChild(pathTd);
     const sizeTd = document.createElement("td");
     sizeTd.textContent = formatBytes(f.size);

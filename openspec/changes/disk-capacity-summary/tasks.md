@@ -1,0 +1,5 @@
+- [x] diskspace package + API endpoint
+- [x] Disk pie chart and stats panel
+- [x] Auto-scan default root
+- [x] Fix largest files grid + path column layout
+- [x] Smoke tests + testing-report.md
