@@ -97,6 +97,10 @@ button:disabled {
   margin-right: 0.5rem;
 }
 
+.link-btn.danger {
+  color: #f85149;
+}
+
 .progress {
   margin-top: 0.75rem;
 }
