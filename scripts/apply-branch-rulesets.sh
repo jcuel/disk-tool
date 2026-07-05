@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 # Apply repository rulesets from .github/rulesets/*.json
-# Requires: gh CLI authenticated with admin access on the repo.
-#
-# Note: master.json includes the branch-policy status check. Run after
-# .github/workflows/branch-policy.yml is on the default branch.
+# Primary path: .github/workflows/sync-branch-rulesets.yml on push to dev.
+# Local use: requires gh CLI authenticated with admin access on the repo.
 set -euo pipefail
 
 REPO="${1:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}"

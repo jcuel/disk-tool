@@ -30,7 +30,7 @@ Required CI checks: Linux/Windows unit smoke, Docker smoke, Cypress E2E, Trivy s
 
 Contributors opening a PR to `master` (other than maintainer `dev` → `master`) will fail the **Policy — master is maintainer-only** check.
 
-Ruleset definitions live in [`.github/rulesets/`](.github/rulesets/). Maintainers can re-apply after edits:
+Ruleset definitions live in [`.github/rulesets/`](.github/rulesets/). They sync automatically to GitHub when merged to `dev` via the [Sync branch rulesets](https://github.com/jcuel/disk-tool/actions/workflows/sync-branch-rulesets.yml) workflow. Maintainers can also run locally for debugging:
 
 ```bash
 bash scripts/apply-branch-rulesets.sh
