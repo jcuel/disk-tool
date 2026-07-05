@@ -40,7 +40,10 @@ func Analyze(job *model.ScanJob) *model.InsightsReport {
 		return &model.InsightsReport{Summary: "No scan data yet."}
 	}
 
-	report := &model.InsightsReport{}
+	report := &model.InsightsReport{
+		TopConsumers:      []model.TopConsumer{},
+		CleanupCandidates: []model.CleanupCandidate{},
+	}
 	rootSize := job.Tree.Size
 	if rootSize <= 0 {
 		rootSize = 1

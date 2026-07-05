@@ -394,14 +394,15 @@ function renderInsights() {
   }
   insightsSummary.textContent = ins.summary;
   cleanupBody.innerHTML = "";
-  cleanupToolbar.classList.toggle("hidden", ins.cleanupCandidates.length === 0);
-  if (ins.cleanupCandidates.length === 0) {
+  const candidates = ins.cleanupCandidates || [];
+  cleanupToolbar.classList.toggle("hidden", candidates.length === 0);
+  if (candidates.length === 0) {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td colspan="6" class="muted">No known cleanup patterns yet — drill into Users, Projects, or Downloads</td>`;
     cleanupBody.appendChild(tr);
     return;
   }
-  for (const c of ins.cleanupCandidates) {
+  for (const c of candidates) {
     const tr = document.createElement("tr");
     tr.className = "clickable";
     const checkTd = document.createElement("td");
