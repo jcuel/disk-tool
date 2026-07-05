@@ -77,7 +77,7 @@ Pipeline: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 | `test-windows` | windows-latest | `build.ps1`, govulncheck, [`scripts/smoke-api.ps1`](scripts/smoke-api.ps1) |
 | `docker-smoke` | ubuntu + Docker | CLI scan + in-container API smoke |
 | `e2e-linux` | ubuntu-latest | [`scripts/e2e-run.sh`](scripts/e2e-run.sh) — Cypress browser tests |
-| `security` | Trivy | Filesystem + container image (CRITICAL/HIGH) |
+| `security` | Trivy | Filesystem + container image (CRITICAL/HIGH); PR comment with scan tables |
 | `sync` | ubuntu-latest | Project board sync after merge ([`sync-project-board.yml`](.github/workflows/sync-project-board.yml)) |
 
 **Local smoke**

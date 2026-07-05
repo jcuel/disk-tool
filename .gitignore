@@ -2,5 +2,8 @@
 /web/dist
 /web/cypress/screenshots
 /web/cypress/videos
+/trivy-fs.txt
+/trivy-image.txt
+/.trivy-pr-comment.md
 /bin
 *.exe
