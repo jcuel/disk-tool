@@ -41,4 +41,7 @@ cd "$ROOT/web"
 export CYPRESS_BASE_URL="$BASE"
 npx cypress@14.3.2 run --env "scanRoot=$FIXTURE"
 
+SHOT_COUNT="$(find cypress/screenshots -name '*.png' 2>/dev/null | wc -l | tr -d ' ')"
+echo "e2e-run: captured ${SHOT_COUNT} screenshot(s)"
+
 echo "e2e-run: all Cypress specs passed"

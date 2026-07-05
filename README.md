@@ -95,6 +95,8 @@ bash scripts/smoke-docker.sh   # requires Docker
 # Cypress E2E (Linux/WSL — builds server + runs headless browser tests)
 bash scripts/e2e-run.sh
 
+On pull requests, CI uploads E2E screenshots as artifacts and posts a sticky PR comment with inline UI snapshots (artifact link fallback when inline upload is unavailable).
+
 # Windows E2E (after ./build.ps1)
 .\scripts\e2e-run.ps1
 ```
