@@ -118,21 +118,26 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-      - name: Prepare git for screenshot branch upload
-        if: github.event_name == 'pull_request' && always()
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      - name: Comment PR with inline screenshots
-        id: inline-screenshots
+      - name: Publish E2E screenshots for PR comment
+        id: publish-screenshots
         if: github.event_name == 'pull_request' && always()
         continue-on-error: true
-        uses: opengisch/comment-pr-with-images@upload_only
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_ID: ${{ github.run_id }}
+        run: bash scripts/e2e-pr-screenshots-comment.sh
+
+      - name: Comment PR with inline screenshots
+        if: github.event_name == 'pull_request' && always() && steps.publish-screenshots.outcome == 'success'
+        uses: peter-evans/create-or-update-comment@v4
         with:
-          images: "web/cypress/screenshots/**/*.png"
-          upload_to: github_branch
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-tag: e2e-screenshots-gallery
+          edit-mode: replace
+          body-path: .e2e-screenshots-comment.md
 
       - name: Fallback PR comment (artifact link)
-        if: github.event_name == 'pull_request' && always() && steps.inline-screenshots.outcome != 'success'
+        if: github.event_name == 'pull_request' && always() && steps.publish-screenshots.outcome != 'success'
         uses: peter-evans/create-or-update-comment@v4
         with:
           issue-number: ${{ github.event.pull_request.number }}

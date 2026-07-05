@@ -21,17 +21,13 @@ After `bash scripts/e2e-run.sh`, `actions/upload-artifact@v4` uploads `web/cypre
 
 ## Inline PR comment
 
-[`opengisch/comment-pr-with-images@upload_only`](https://github.com/opengisch/comment-pr-with-images) with `upload_to: github_branch`:
-
-- Pushes PNGs to branch `e2e-screenshots/pr-<number>`
-- Embeds `raw.githubusercontent.com` URLs in one updatable comment (`edit_previous_comment: true`)
-- Job permissions: `contents: write`, `pull-requests: write`
+[`scripts/e2e-pr-screenshots-comment.sh`](scripts/e2e-pr-screenshots-comment.sh) pushes PNGs to branch `e2e-screenshots/pr-<number>` and writes markdown with `raw.githubusercontent.com` image URLs. [`peter-evans/create-or-update-comment@v4`](https://github.com/peter-evans/create-or-update-comment) posts/updates one gallery comment (`comment-tag: e2e-screenshots-gallery`).
 
 PR-only: `if: github.event_name == 'pull_request' && always()`.
 
 ## Fallback comment
 
-When inline upload fails or no PNGs exist, [`peter-evans/create-or-update-comment@v4`](https://github.com/peter-evans/create-or-update-comment) posts/updates a comment linking to the workflow run and artifact name. Marker: `<!-- e2e-screenshots-fallback -->`.
+When publish fails or no PNGs exist, peter-evans posts/updates a comment linking to the workflow run and artifact name. Marker: `comment-tag: e2e-screenshots-fallback`.
 
 ## Fork PR caveat
 
