@@ -1,7 +1,7 @@
 # Proposal: Cypress PR screenshot gallery
 
 **Change:** e2e-pr-screenshots
-**Status:** in-progress
+**Status:** archived
 
 ## Summary
 

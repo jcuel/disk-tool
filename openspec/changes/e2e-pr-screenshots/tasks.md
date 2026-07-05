@@ -9,4 +9,4 @@
 - [x] CI artifact upload + PR comment steps
 - [x] README note
 - [x] testing-report.md on PR CI green
-- [ ] archive delta into canonical spec
+- [x] archive delta into canonical spec
