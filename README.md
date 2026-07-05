@@ -125,6 +125,17 @@ OpenSpec layout: `openspec/`. Slash commands: `.cursor/commands/`.
 
 **Tracking:** [Issues](https://github.com/jcuel/disk-tool/issues) · [Project board](https://github.com/users/jcuel/projects/3) · [Milestones](https://github.com/jcuel/disk-tool/milestones). See [`.github/PROJECT.md`](.github/PROJECT.md) for status, comments, and views.
 
+## Community
+
+| Document | Purpose |
+|----------|---------|
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Fork → `dev` workflow, tests, PR expectations |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
+| [SECURITY.md](SECURITY.md) | Vulnerability reporting |
+| [LICENSE](LICENSE) | PolyForm Noncommercial — collaborate freely; commercial use requires permission |
+
+Contributors open PRs against **`dev`**. Only the maintainer merges **`dev` → `master`** for releases.
+
 ## Reuse for new projects
 
 Copy [`template/`](template/) to bootstrap SPECBOOT + OpenSpec on a new repo. See [`template/README.md`](template/README.md).

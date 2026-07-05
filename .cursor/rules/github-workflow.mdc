@@ -9,11 +9,13 @@ No Jira — track work in **GitHub Issues** and the repo **Project board**. Open
 
 ## Branches
 
-- **`master`** — default; always deployable. No direct commits for feature work.
-- **Feature branches** — one branch per OpenSpec change or fix:
+- **`master`** — stable / release-ready. **Maintainer only:** merge from `dev`; no direct contributor PRs.
+- **`dev`** — integration branch. **All contributor PRs target `dev`.**
+- **Feature branches** — one branch per OpenSpec change or fix, cut from `dev`:
   - `feat/<change-name>` — new capability (`/apply`)
   - `fix/<topic>` — bug fixes
   - `chore/<topic>` — CI, docs, tooling
+- **Fork workflow:** contributors fork the repo, branch from `dev`, PR back to `dev`. See [CONTRIBUTING.md](../CONTRIBUTING.md).
 - Create the branch at `/apply` (or before, for chores). Push early; open a **draft PR** linked to the issue.
 
 ## Issues
@@ -41,7 +43,7 @@ No Jira — track work in **GitHub Issues** and the repo **Project board**. Open
 | Ready | Scoped; proposal done or N/A; pick up next |
 | In progress | branch + `/apply` |
 | In review | PR open; `/verify` + `/code-review` |
-| Done | merged to `master`; `/archive` complete |
+| Done | merged to `dev` (contributors) or `master` (release); `/archive` complete |
 
 Move the card on the board **and** leave a brief issue comment (status, branch, next step).
 
@@ -59,16 +61,18 @@ Create in the project UI (see `.github/PROJECT.md`): **Board** (group by Status)
 
 ## Pull requests
 
-- Target: `master`.
+- **Contributors:** target `dev`.
+- **Maintainer release:** `dev` → `master` when integrating a release.
 - Title: same as issue or `[change-name] summary`.
-- Body: `Closes #N`, summary, test plan, link to `testing-report.md`.
+- Body: `Closes #N`, summary, test plan, link to `testing-report.md` (use [PR template](../.github/pull_request_template.md)).
 - CI must be green before merge.
 - Merge via squash or merge commit per team preference; delete branch after merge.
 
 ## Traceability chain
 
 ```
-GitHub Issue → feature branch → PR → CI → merge → closes issue → OpenSpec archive
+GitHub Issue → feature branch (from dev) → PR → dev → CI → merge → closes issue → OpenSpec archive
+Maintainer: dev → master (release)
 ```
 
 Every merged change should be recoverable from issue + PR + `openspec/changes/<name>/` history.

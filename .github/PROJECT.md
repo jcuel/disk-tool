@@ -12,7 +12,7 @@ Maps to SPECBOOT stages:
 | **Ready** | Scoped issue; `/propose` done or not needed; pick up next |
 | **In progress** | Branch open; `/apply` active |
 | **In review** | PR open; `/verify` + `/code-review` |
-| **Done** | Merged to `master`; `/archive` complete |
+| **Done** | Merged to `dev` (or `master` for release); `/archive` complete |
 
 Move status on the project board when stage changes. Keep issue **comments** updated at each transition.
 
