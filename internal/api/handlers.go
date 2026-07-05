@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/jcuel/disk-tool/internal/model"
@@ -39,6 +40,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/scans/{id}/export", s.handleExport)
 	mux.HandleFunc("POST /api/scans/{id}/open", s.handleOpenPath)
 	mux.HandleFunc("POST /api/scans/{id}/delete", s.handleDeletePath)
+	mux.HandleFunc("POST /api/scans/{id}/cleanup", s.handleCleanup)
 	if s.static != nil {
 		mux.Handle("/", s.static)
 	}
@@ -228,6 +230,34 @@ func (s *Server) handleDeletePath(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted", "path": abs})
 }
 
+func (s *Server) handleCleanup(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	job, ok := s.store.GetMutable(id)
+	if !ok {
+		writeError(w, http.StatusNotFound, "scan not found")
+		return
+	}
+	if job.Status != model.ScanStatusCompleted {
+		writeError(w, http.StatusBadRequest, "scan not completed")
+		return
+	}
+	var req model.CleanupRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	report, err := RunCleanup(job, req)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	job.LastCleanupReport = report
+	if !req.DryRun {
+		pruneDeletedCandidates(job, report)
+	}
+	writeJSON(w, http.StatusOK, report)
+}
+
 func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	format := r.URL.Query().Get("format")
@@ -261,8 +291,33 @@ func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		_, _ = w.Write([]byte(job.Insights.TicketText))
+	case "cleanup-json":
+		if job.LastCleanupReport == nil {
+			writeError(w, http.StatusNotFound, "no cleanup report available")
+			return
+		}
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"cleanup-%s.json\"", id))
+		writeJSON(w, http.StatusOK, job.LastCleanupReport)
+	case "cleanup-html":
+		if job.LastCleanupReport == nil {
+			writeError(w, http.StatusNotFound, "no cleanup report available")
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"cleanup-%s.html\"", id))
+		if err := renderCleanupHTMLReport(w, job.LastCleanupReport, id); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+		}
+	case "cleanup-ticket":
+		if job.LastCleanupReport == nil {
+			writeError(w, http.StatusNotFound, "no cleanup report available")
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"cleanup-%s.txt\"", id))
+		_, _ = w.Write([]byte(job.LastCleanupReport.ReportText))
 	default:
-		writeError(w, http.StatusBadRequest, "format must be json, html, or ticket")
+		writeError(w, http.StatusBadRequest, "format must be json, html, ticket, cleanup-json, cleanup-html, or cleanup-ticket")
 	}
 }
 
@@ -375,6 +430,76 @@ th{background:#161b22}.bar{height:8px;background:#238636;display:inline-block;mi
 		data.Largest = append(data.Largest, largestRow{Path: f.Path, SizeHuman: formatBytes(f.Size)})
 	}
 	t, err := template.New("report").Parse(tpl)
+	if err != nil {
+		return err
+	}
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, data); err != nil {
+		return err
+	}
+	_, err = w.Write(buf.Bytes())
+	return err
+}
+
+func renderCleanupHTMLReport(w http.ResponseWriter, report *model.CleanupReport, scanID string) error {
+	const tpl = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>disk-tool cleanup {{.ScanID}}</title>
+<style>
+body{font-family:system-ui,sans-serif;margin:2rem;background:#0f1419;color:#e6edf3}
+table{border-collapse:collapse;width:100%}th,td{border:1px solid #30363d;padding:.5rem;text-align:left}
+th{background:#161b22}.deleted{color:#3fb950}.skipped{color:#d29922}.failed{color:#f85149}
+</style></head><body>
+<h1>Cleanup report</h1>
+<p>Scan: {{.ScanID}} | Mode: {{.Mode}} | Reclaimed: {{.Reclaimed}}</p>
+<p>Started: {{.Started}} | Finished: {{.Finished}}</p>
+<table><tr><th>Status</th><th>Path</th><th>Size</th><th>Category</th><th>Reason</th></tr>
+{{range .Rows}}<tr class="{{.Class}}"><td>{{.Status}}</td><td>{{.Path}}</td><td>{{.Size}}</td><td>{{.Category}}</td><td>{{.Reason}}</td></tr>
+{{end}}</table></body></html>`
+
+	type row struct {
+		Status   string
+		Path     string
+		Size     string
+		Category string
+		Reason   string
+		Class    string
+	}
+	mode := "executed"
+	if report.DryRun {
+		mode = "dry run"
+	}
+	data := struct {
+		ScanID    string
+		Mode      string
+		Reclaimed string
+		Started   string
+		Finished  string
+		Rows      []row
+	}{
+		ScanID:    scanID,
+		Mode:      mode,
+		Reclaimed: formatBytes(report.BytesReclaimed),
+		Started:   report.StartedAt.Format(time.RFC3339),
+		Finished:  report.FinishedAt.Format(time.RFC3339),
+	}
+	for _, r := range report.Results {
+		class := "skipped"
+		switch r.Status {
+		case model.CleanupStatusDeleted, model.CleanupStatusWouldDelete:
+			class = "deleted"
+		case model.CleanupStatusFailed:
+			class = "failed"
+		}
+		data.Rows = append(data.Rows, row{
+			Status:   r.Status,
+			Path:     r.Path,
+			Size:     formatBytes(r.Size),
+			Category: r.Category,
+			Reason:   r.Reason,
+			Class:    class,
+		})
+	}
+	t, err := template.New("cleanup").Parse(tpl)
 	if err != nil {
 		return err
 	}

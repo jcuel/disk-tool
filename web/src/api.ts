@@ -45,11 +45,37 @@ export interface ScanJob {
   tree?: ScanNode;
   largestFiles?: FileEntry[];
   insights?: InsightsReport;
+  lastCleanupReport?: CleanupReport;
   dirsScanned: number;
   filesScanned: number;
   bytesScanned: number;
   currentPath: string;
   error?: string;
+}
+
+export interface CleanupItemResult {
+  path: string;
+  size: number;
+  category?: string;
+  status: string;
+  reason?: string;
+}
+
+export interface CleanupReport {
+  dryRun: boolean;
+  startedAt: string;
+  finishedAt: string;
+  totalRequested: number;
+  bytesReclaimed: number;
+  results: CleanupItemResult[];
+  reportText: string;
+}
+
+export interface CleanupRequest {
+  paths: string[];
+  dryRun: boolean;
+  confirm: boolean;
+  confirmPhrase: string;
 }
 
 export interface ProgressEvent {
@@ -142,6 +168,19 @@ export async function openPath(id: string, path: string): Promise<void> {
     const e = await r.json();
     throw new Error(e.error || "open failed");
   }
+}
+
+export async function runCleanup(id: string, req: CleanupRequest): Promise<CleanupReport> {
+  const r = await fetch(`/api/scans/${id}/cleanup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!r.ok) {
+    const e = await r.json();
+    throw new Error(e.error || "cleanup failed");
+  }
+  return r.json();
 }
 
 export async function cancelScan(id: string): Promise<void> {

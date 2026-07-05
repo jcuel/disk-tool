@@ -9,7 +9,9 @@ import {
   getScan,
   needsExpand,
   openPath,
+  runCleanup,
   startScan,
+  type CleanupReport,
   type ScanJob,
   type ScanNode,
 } from "./api";
@@ -60,8 +62,15 @@ app.innerHTML = `
     <p id="insights-summary" class="hint">Run an overview scan to see where space is used.</p>
     <h3>Cleanup candidates</h3>
     <p class="hint">Leftover project deps, caches, and downloads — review before deleting</p>
+    <div id="cleanup-toolbar" class="cleanup-toolbar hidden">
+      <button type="button" id="select-review-btn" class="secondary-btn">Select safe (review)</button>
+      <button type="button" id="select-all-btn" class="secondary-btn">Select all</button>
+      <button type="button" id="clear-select-btn" class="secondary-btn">Clear</button>
+      <button type="button" id="review-cleanup-btn">Review cleanup…</button>
+    </div>
+    <div id="cleanup-report-panel" class="cleanup-report hidden"></div>
     <table id="cleanup-table">
-      <thead><tr><th>Type</th><th>Path</th><th>Size</th><th>Hint</th><th></th></tr></thead>
+      <thead><tr><th></th><th>Type</th><th>Path</th><th>Size</th><th>Hint</th><th></th></tr></thead>
       <tbody></tbody>
     </table>
   </section>
@@ -74,6 +83,13 @@ app.innerHTML = `
     </table>
   </section>
 </main>
+<div id="modal-backdrop" class="modal-backdrop hidden" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3 id="modal-title"></h3>
+    <div id="modal-body"></div>
+    <div id="modal-actions" class="modal-actions"></div>
+  </div>
+</div>
 `;
 
 const pathInput = document.getElementById("path-input") as HTMLInputElement;
@@ -93,12 +109,24 @@ const filesBody = document.querySelector("#files-table tbody")!;
 const cleanupBody = document.querySelector("#cleanup-table tbody")!;
 const insightsSummary = document.getElementById("insights-summary")!;
 const breadcrumb = document.getElementById("breadcrumb")!;
+const cleanupToolbar = document.getElementById("cleanup-toolbar")!;
+const cleanupReportPanel = document.getElementById("cleanup-report-panel")!;
+const selectReviewBtn = document.getElementById("select-review-btn") as HTMLButtonElement;
+const selectAllBtn = document.getElementById("select-all-btn") as HTMLButtonElement;
+const clearSelectBtn = document.getElementById("clear-select-btn") as HTMLButtonElement;
+const reviewCleanupBtn = document.getElementById("review-cleanup-btn") as HTMLButtonElement;
+const modalBackdrop = document.getElementById("modal-backdrop")!;
+const modalTitle = document.getElementById("modal-title")!;
+const modalBody = document.getElementById("modal-body")!;
+const modalActions = document.getElementById("modal-actions")!;
 
 let scanId: string | null = null;
 let job: ScanJob | null = null;
 let selectedPath: string | null = null;
 let ws: WebSocket | null = null;
 let expanding = false;
+const selectedCleanup = new Set<string>();
+let pendingDryRun: CleanupReport | null = null;
 
 initCharts(
   document.getElementById("treemap")!,
@@ -235,20 +263,45 @@ function renderInsights() {
   if (!ins) {
     insightsSummary.textContent = "Run an overview scan to see where space is used.";
     cleanupBody.innerHTML = "";
+    cleanupToolbar.classList.add("hidden");
+    cleanupReportPanel.classList.add("hidden");
     return;
   }
   insightsSummary.textContent = ins.summary;
   cleanupBody.innerHTML = "";
+  cleanupToolbar.classList.toggle("hidden", ins.cleanupCandidates.length === 0);
   if (ins.cleanupCandidates.length === 0) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="4" class="muted">No known cleanup patterns yet — drill into Users, Projects, or Downloads</td>`;
+    tr.innerHTML = `<td colspan="6" class="muted">No known cleanup patterns yet — drill into Users, Projects, or Downloads</td>`;
     cleanupBody.appendChild(tr);
     return;
   }
   for (const c of ins.cleanupCandidates) {
     const tr = document.createElement("tr");
     tr.className = "clickable";
-    tr.innerHTML = `<td><span class="badge-cat">${escapeHtml(c.category)}</span></td><td>${escapeHtml(c.path)}</td><td>${formatBytes(c.size)}</td><td>${escapeHtml(c.hint)}</td>`;
+    const checkTd = document.createElement("td");
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = selectedCleanup.has(c.path);
+    cb.onclick = (e) => e.stopPropagation();
+    cb.onchange = () => {
+      if (cb.checked) selectedCleanup.add(c.path);
+      else selectedCleanup.delete(c.path);
+    };
+    checkTd.appendChild(cb);
+    tr.appendChild(checkTd);
+    const typeTd = document.createElement("td");
+    typeTd.innerHTML = `<span class="badge-cat">${escapeHtml(c.category)}</span>`;
+    tr.appendChild(typeTd);
+    const pathTd = document.createElement("td");
+    pathTd.textContent = c.path;
+    tr.appendChild(pathTd);
+    const sizeTd = document.createElement("td");
+    sizeTd.textContent = formatBytes(c.size);
+    tr.appendChild(sizeTd);
+    const hintTd = document.createElement("td");
+    hintTd.textContent = c.hint;
+    tr.appendChild(hintTd);
     const openTd = document.createElement("td");
     openTd.appendChild(makeOpenBtn(c.path));
     openTd.appendChild(document.createTextNode(" "));
@@ -257,7 +310,185 @@ function renderInsights() {
     tr.onclick = () => selectPath(c.path, true);
     cleanupBody.appendChild(tr);
   }
+  renderCleanupReport();
 }
+
+function renderCleanupReport() {
+  const report = job?.lastCleanupReport;
+  if (!report || !scanId) {
+    cleanupReportPanel.classList.add("hidden");
+    return;
+  }
+  cleanupReportPanel.classList.remove("hidden");
+  const mode = report.dryRun ? "Dry run" : "Executed";
+  cleanupReportPanel.innerHTML = `
+    <p><strong>Last cleanup (${mode}):</strong> ${report.results.length} item(s), reclaimed ${formatBytes(report.bytesReclaimed)}</p>
+    <div class="cleanup-report-actions">
+      <button type="button" class="secondary-btn" data-export="cleanup-json">JSON</button>
+      <button type="button" class="secondary-btn" data-export="cleanup-html">HTML</button>
+      <button type="button" class="secondary-btn" data-export="cleanup-ticket">Ticket</button>
+      <button type="button" class="secondary-btn" id="copy-cleanup-report">Copy report</button>
+    </div>`;
+  cleanupReportPanel.querySelectorAll("[data-export]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const fmt = (btn as HTMLElement).dataset.export;
+      window.open(`/api/scans/${scanId}/export?format=${fmt}`, "_blank");
+    });
+  });
+  document.getElementById("copy-cleanup-report")!.onclick = async () => {
+    await navigator.clipboard.writeText(report.reportText);
+  };
+}
+
+function closeModal() {
+  modalBackdrop.classList.add("hidden");
+  modalBackdrop.setAttribute("aria-hidden", "true");
+  modalBody.innerHTML = "";
+  modalActions.innerHTML = "";
+}
+
+function openModal(title: string, bodyHtml: string, actions: { label: string; primary?: boolean; danger?: boolean; onClick: () => void | Promise<void> }[]) {
+  modalTitle.textContent = title;
+  modalBody.innerHTML = bodyHtml;
+  modalActions.innerHTML = "";
+  for (const a of actions) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = a.label;
+    if (a.primary) btn.className = "primary-btn";
+    else if (a.danger) btn.className = "danger-btn";
+    else btn.className = "secondary-btn";
+    btn.onclick = async () => {
+      await a.onClick();
+    };
+    modalActions.appendChild(btn);
+  }
+  modalBackdrop.classList.remove("hidden");
+  modalBackdrop.setAttribute("aria-hidden", "false");
+}
+
+function selectedCandidates() {
+  return (job?.insights?.cleanupCandidates || []).filter((c) => selectedCleanup.has(c.path));
+}
+
+function totalSelectedBytes(): number {
+  return selectedCandidates().reduce((n, c) => n + c.size, 0);
+}
+
+async function startReviewCleanup() {
+  if (!scanId) return;
+  const items = selectedCandidates();
+  if (items.length === 0) {
+    alert("Select at least one cleanup candidate.");
+    return;
+  }
+  const rows = items.map((c) =>
+    `<tr><td>${escapeHtml(c.category)}</td><td>${escapeHtml(c.path)}</td><td>${formatBytes(c.size)}</td><td>${escapeHtml(c.risk)}</td></tr>`
+  ).join("");
+  const body = `
+    <p>${items.length} item(s), total ${formatBytes(totalSelectedBytes())}</p>
+    <table class="modal-table"><thead><tr><th>Type</th><th>Path</th><th>Size</th><th>Risk</th></tr></thead><tbody>${rows}</tbody></table>`;
+  openModal("Review cleanup", body, [
+    { label: "Cancel", onClick: closeModal },
+    {
+      label: "Continue",
+      primary: true,
+      onClick: async () => {
+        try {
+          pendingDryRun = await runCleanup(scanId!, {
+            paths: items.map((c) => c.path),
+            dryRun: true,
+            confirm: false,
+            confirmPhrase: "",
+          });
+          showConfirmModal(items);
+        } catch (e) {
+          alert(String(e));
+        }
+      },
+    },
+  ]);
+}
+
+function showConfirmModal(items: { path: string; size: number; category: string }[]) {
+  const dry = pendingDryRun;
+  const dryRows = (dry?.results || []).map((r) =>
+    `<tr><td>${escapeHtml(r.status)}</td><td>${escapeHtml(r.path)}</td><td>${formatBytes(r.size)}</td><td>${escapeHtml(r.reason || "")}</td></tr>`
+  ).join("");
+  const body = `
+    <p class="warning">This permanently deletes the selected paths. This cannot be undone.</p>
+    ${dry ? `<p>Dry-run: ${dry.results.filter((r) => r.status === "would_delete").length} ready, ${dry.results.filter((r) => r.status.startsWith("skipped")).length} skipped</p>` : ""}
+    ${dryRows ? `<table class="modal-table"><thead><tr><th>Status</th><th>Path</th><th>Size</th><th>Reason</th></tr></thead><tbody>${dryRows}</tbody></table>` : ""}
+    <label class="confirm-check"><input type="checkbox" id="cleanup-reviewed" /> I reviewed these paths</label>
+    <label>Type <strong>DELETE</strong> to confirm<br/><input type="text" id="cleanup-phrase" class="modal-input" autocomplete="off" /></label>`;
+  openModal("Confirm cleanup", body, [
+    { label: "Back", onClick: () => startReviewCleanup() },
+    {
+      label: "Run cleanup",
+      danger: true,
+      onClick: async () => {
+        const reviewed = (document.getElementById("cleanup-reviewed") as HTMLInputElement).checked;
+        const phrase = (document.getElementById("cleanup-phrase") as HTMLInputElement).value.trim();
+        if (!reviewed) {
+          alert("Check the review confirmation box.");
+          return;
+        }
+        if (phrase !== "DELETE") {
+          alert('Type DELETE to confirm.');
+          return;
+        }
+        if (!scanId) return;
+        try {
+          reviewCleanupBtn.disabled = true;
+          const report = await runCleanup(scanId, {
+            paths: items.map((c) => c.path),
+            dryRun: false,
+            confirm: true,
+            confirmPhrase: "DELETE",
+          });
+          pendingDryRun = null;
+          for (const r of report.results) {
+            if (r.status === "deleted") selectedCleanup.delete(r.path);
+          }
+          closeModal();
+          await refreshJob();
+          alert(`Cleanup complete. Reclaimed ${formatBytes(report.bytesReclaimed)}.`);
+        } catch (e) {
+          alert(String(e));
+        } finally {
+          reviewCleanupBtn.disabled = false;
+        }
+      },
+    },
+  ]);
+}
+
+selectReviewBtn.onclick = () => {
+  selectedCleanup.clear();
+  for (const c of job?.insights?.cleanupCandidates || []) {
+    if (c.risk === "review") selectedCleanup.add(c.path);
+  }
+  renderInsights();
+};
+
+selectAllBtn.onclick = () => {
+  selectedCleanup.clear();
+  for (const c of job?.insights?.cleanupCandidates || []) {
+    selectedCleanup.add(c.path);
+  }
+  renderInsights();
+};
+
+clearSelectBtn.onclick = () => {
+  selectedCleanup.clear();
+  renderInsights();
+};
+
+reviewCleanupBtn.onclick = () => startReviewCleanup();
+
+modalBackdrop.onclick = (e) => {
+  if (e.target === modalBackdrop) closeModal();
+};
 
 async function selectPath(path: string, autoExpand: boolean) {
   selectedPath = path;
