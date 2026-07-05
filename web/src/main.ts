@@ -120,6 +120,16 @@ const modalTitle = document.getElementById("modal-title")!;
 const modalBody = document.getElementById("modal-body")!;
 const modalActions = document.getElementById("modal-actions")!;
 
+let modalBusy = false;
+
+const modalDialog = modalBackdrop.querySelector(".modal") as HTMLDivElement;
+modalDialog.addEventListener("click", (e) => e.stopPropagation());
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !modalBackdrop.classList.contains("hidden") && !modalBusy) {
+    closeModal();
+  }
+});
 let scanId: string | null = null;
 let job: ScanJob | null = null;
 let selectedPath: string | null = null;
@@ -347,6 +357,14 @@ function closeModal() {
   modalActions.innerHTML = "";
 }
 
+function setModalLoading(message: string) {
+  modalTitle.textContent = "Please wait";
+  modalBody.innerHTML = `<p class="modal-loading">${escapeHtml(message)}</p>`;
+  modalActions.innerHTML = "";
+  modalBackdrop.classList.remove("hidden");
+  modalBackdrop.setAttribute("aria-hidden", "false");
+}
+
 function openModal(title: string, bodyHtml: string, actions: { label: string; primary?: boolean; danger?: boolean; onClick: () => void | Promise<void> }[]) {
   modalTitle.textContent = title;
   modalBody.innerHTML = bodyHtml;
@@ -358,8 +376,15 @@ function openModal(title: string, bodyHtml: string, actions: { label: string; pr
     if (a.primary) btn.className = "primary-btn";
     else if (a.danger) btn.className = "danger-btn";
     else btn.className = "secondary-btn";
-    btn.onclick = async () => {
-      await a.onClick();
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      if (modalBusy) return;
+      modalBusy = true;
+      try {
+        await a.onClick();
+      } finally {
+        modalBusy = false;
+      }
     };
     modalActions.appendChild(btn);
   }
@@ -382,20 +407,28 @@ async function startReviewCleanup() {
     alert("Select at least one cleanup candidate.");
     return;
   }
+  openReviewModal(items);
+}
+
+function openReviewModal(items: ReturnType<typeof selectedCandidates>) {
   const rows = items.map((c) =>
     `<tr><td>${escapeHtml(c.category)}</td><td>${escapeHtml(c.path)}</td><td>${formatBytes(c.size)}</td><td>${escapeHtml(c.risk)}</td></tr>`
   ).join("");
   const body = `
     <p>${items.length} item(s), total ${formatBytes(totalSelectedBytes())}</p>
-    <table class="modal-table"><thead><tr><th>Type</th><th>Path</th><th>Size</th><th>Risk</th></tr></thead><tbody>${rows}</tbody></table>`;
+    <div class="modal-table-wrap">
+    <table class="modal-table"><thead><tr><th>Type</th><th>Path</th><th>Size</th><th>Risk</th></tr></thead><tbody>${rows}</tbody></table>
+    </div>`;
   openModal("Review cleanup", body, [
     { label: "Cancel", onClick: closeModal },
     {
       label: "Continue",
       primary: true,
       onClick: async () => {
+        if (!scanId) return;
+        setModalLoading("Running dry-run preflight…");
         try {
-          pendingDryRun = await runCleanup(scanId!, {
+          pendingDryRun = await runCleanup(scanId, {
             paths: items.map((c) => c.path),
             dryRun: true,
             confirm: false,
@@ -404,6 +437,7 @@ async function startReviewCleanup() {
           showConfirmModal(items);
         } catch (e) {
           alert(String(e));
+          openReviewModal(items);
         }
       },
     },
@@ -418,11 +452,11 @@ function showConfirmModal(items: { path: string; size: number; category: string 
   const body = `
     <p class="warning">This permanently deletes the selected paths. This cannot be undone.</p>
     ${dry ? `<p>Dry-run: ${dry.results.filter((r) => r.status === "would_delete").length} ready, ${dry.results.filter((r) => r.status.startsWith("skipped")).length} skipped</p>` : ""}
-    ${dryRows ? `<table class="modal-table"><thead><tr><th>Status</th><th>Path</th><th>Size</th><th>Reason</th></tr></thead><tbody>${dryRows}</tbody></table>` : ""}
+    ${dryRows ? `<div class="modal-table-wrap"><table class="modal-table"><thead><tr><th>Status</th><th>Path</th><th>Size</th><th>Reason</th></tr></thead><tbody>${dryRows}</tbody></table></div>` : ""}
     <label class="confirm-check"><input type="checkbox" id="cleanup-reviewed" /> I reviewed these paths</label>
     <label>Type <strong>DELETE</strong> to confirm<br/><input type="text" id="cleanup-phrase" class="modal-input" autocomplete="off" /></label>`;
   openModal("Confirm cleanup", body, [
-    { label: "Back", onClick: () => startReviewCleanup() },
+    { label: "Back", onClick: () => openReviewModal(items as ReturnType<typeof selectedCandidates>) },
     {
       label: "Run cleanup",
       danger: true,
@@ -440,6 +474,7 @@ function showConfirmModal(items: { path: string; size: number; category: string 
         if (!scanId) return;
         try {
           reviewCleanupBtn.disabled = true;
+          setModalLoading("Deleting selected paths…");
           const report = await runCleanup(scanId, {
             paths: items.map((c) => c.path),
             dryRun: false,
@@ -455,6 +490,7 @@ function showConfirmModal(items: { path: string; size: number; category: string 
           alert(`Cleanup complete. Reclaimed ${formatBytes(report.bytesReclaimed)}.`);
         } catch (e) {
           alert(String(e));
+          showConfirmModal(items);
         } finally {
           reviewCleanupBtn.disabled = false;
         }
@@ -487,7 +523,7 @@ clearSelectBtn.onclick = () => {
 reviewCleanupBtn.onclick = () => startReviewCleanup();
 
 modalBackdrop.onclick = (e) => {
-  if (e.target === modalBackdrop) closeModal();
+  if (e.target === modalBackdrop && !modalBusy) closeModal();
 };
 
 async function selectPath(path: string, autoExpand: boolean) {

@@ -345,6 +345,24 @@ tr.clickable:hover {
   margin: 0.75rem 0;
 }
 
+.modal-table-wrap {
+  max-height: 40vh;
+  overflow: auto;
+  margin: 0.75rem 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.modal-table-wrap .modal-table {
+  margin: 0;
+}
+
+.modal-loading {
+  color: var(--muted);
+  font-size: 0.95rem;
+  padding: 1rem 0;
+}
+
 .modal-input {
   width: 100%;
   margin-top: 0.35rem;
