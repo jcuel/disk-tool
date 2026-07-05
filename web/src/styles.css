@@ -133,13 +133,14 @@ button:disabled {
 
 .layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   grid-template-areas:
     "tree charts"
     "tree files"
     "insights insights";
   gap: 1rem;
   padding: 1rem 1.5rem;
+  align-items: stretch;
 }
 
 .panel {
@@ -157,12 +158,25 @@ button:disabled {
 
 .tree-panel {
   grid-area: tree;
-  max-height: 70vh;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.charts-panel {
+  grid-area: charts;
+  min-width: 0;
+}
+
+.files-panel {
+  grid-area: files;
+  min-width: 0;
 }
 
 .insights-panel {
   grid-area: insights;
-  grid-column: auto;
+  min-width: 0;
 }
 
 .insights-panel h3 {
@@ -180,12 +194,38 @@ button:disabled {
   white-space: nowrap;
 }
 
-.files-panel {
-  grid-area: files;
+#tree-table {
+  table-layout: fixed;
+  width: 100%;
 }
 
-.charts-panel {
-  grid-area: charts;
+#tree-table th:nth-child(1),
+#tree-table td:nth-child(1) {
+  width: 34%;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+#tree-table th:nth-child(2),
+#tree-table td:nth-child(2),
+#tree-table th:nth-child(3),
+#tree-table td:nth-child(3) {
+  width: 14%;
+  white-space: nowrap;
+}
+
+#tree-table th:nth-child(4),
+#tree-table td:nth-child(4) {
+  width: 12%;
+  white-space: nowrap;
+}
+
+#tree-table th:nth-child(5),
+#tree-table td:nth-child(5),
+#tree-table th:nth-child(6),
+#tree-table td:nth-child(6) {
+  width: 13%;
+  white-space: nowrap;
 }
 
 .disk-summary {
@@ -269,6 +309,7 @@ button:disabled {
 .chart {
   height: 220px;
   margin-bottom: 0.5rem;
+  cursor: pointer;
 }
 
 table {

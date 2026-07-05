@@ -67,6 +67,7 @@ app.innerHTML = `
   </section>
   <section class="panel charts-panel">
     <h2>Distribution</h2>
+    <p id="charts-hint" class="hint charts-hint hidden">Treemap and bar chart appear after the overview scan completes. Click a segment to drill into that folder.</p>
     <div id="treemap" class="chart"></div>
     <div id="barchart" class="chart"></div>
   </section>
@@ -136,6 +137,7 @@ const modalBackdrop = document.getElementById("modal-backdrop")!;
 const modalTitle = document.getElementById("modal-title")!;
 const modalBody = document.getElementById("modal-body")!;
 const modalActions = document.getElementById("modal-actions")!;
+const chartsHint = document.getElementById("charts-hint")!;
 
 let modalBusy = false;
 
@@ -152,6 +154,7 @@ let job: ScanJob | null = null;
 let selectedPath: string | null = null;
 let ws: WebSocket | null = null;
 let expanding = false;
+let scanning = false;
 const selectedCleanup = new Set<string>();
 let pendingDryRun: CleanupReport | null = null;
 
@@ -297,9 +300,26 @@ function renderLargestFiles() {
   }
 }
 
+function renderEmptyPanels() {
+  chartsHint.classList.toggle("hidden", !scanning);
+  if (scanning) {
+    treeBody.innerHTML =
+      `<tr><td colspan="6" class="muted">Overview scan in progress — see progress bar above. Charts fill in when the scan finishes.</td></tr>`;
+    breadcrumb.innerHTML = "";
+    return;
+  }
+  chartsHint.classList.add("hidden");
+  treeBody.innerHTML =
+    `<tr><td colspan="6" class="muted">Click <strong>Scan overview</strong> to index this path</td></tr>`;
+  breadcrumb.innerHTML = "";
+}
+
 function renderUI() {
   renderLargestFiles();
-  if (!job?.tree) return;
+  if (!job?.tree) {
+    renderEmptyPanels();
+    return;
+  }
   const node = selectedPath ? findNode(job.tree, selectedPath) : job.tree;
   if (!node) return;
 
@@ -341,8 +361,12 @@ function renderUI() {
     treeBody.appendChild(tr);
   }
 
-  renderCharts(node, (p) => selectPath(p, true));
+  renderCharts(node, (path) => {
+    const child = (node?.children || []).find((c) => c.path === path);
+    selectPath(path, child ? needsExpand(child) : true);
+  });
 
+  chartsHint.classList.add("hidden");
   renderInsights();
 }
 
@@ -650,6 +674,7 @@ startBtn.onclick = async () => {
 async function beginScan(root: string) {
   pathInput.value = root;
   void loadDiskSummary(root);
+  scanning = true;
   startBtn.disabled = true;
   cancelBtn.disabled = false;
   exportJson.disabled = true;
@@ -658,7 +683,7 @@ async function beginScan(root: string) {
   copyTicket.disabled = true;
   job = null;
   selectedPath = null;
-  renderLargestFiles();
+  renderUI();
   try {
     scanId = await startScan(root);
     ws?.close();
@@ -679,6 +704,7 @@ async function beginScan(root: string) {
         renderUI();
       }
       if (ev.type === "completed" || ev.type === "cancelled" || ev.type === "error") {
+        scanning = false;
         startBtn.disabled = false;
         cancelBtn.disabled = true;
         if (ev.type === "completed") {
@@ -697,9 +723,11 @@ async function beginScan(root: string) {
       }
     });
   } catch (e) {
+    scanning = false;
     alert(String(e));
     startBtn.disabled = false;
     cancelBtn.disabled = true;
+    renderUI();
   }
 };
 
