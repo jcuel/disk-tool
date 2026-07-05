@@ -29,11 +29,20 @@ Branch naming: `feat/<change-name>`, `fix/<topic>`, `chore/<topic>` — see `git
 
 ## Gate Enforcement
 
-- Do not run `/propose` without `user-story.md`.
-- Do not run `/apply` without proposal artifacts and delta spec.
+- Do not run `/propose` without `user-story.md` and a linked GitHub issue.
+- Do not run `/apply` without proposal artifacts, delta spec, and issue moved to **Ready**.
 - Do not run `/verify` before implementation tasks are complete.
-- Do not run `/code-review` before verify checklist is filled.
-- Do not run `/archive` while critical review blockers exist.
+- Do not run `/code-review` before verify checklist is filled and issue commented.
+- Do not run `/archive` while critical review blockers exist or PR is unmerged.
 - Do not run `/commit` without explicit user approval.
 
 When the user invokes a command out of order, state the current stage and the required prerequisite command.
+
+## Rule files
+
+| File | Scope |
+|------|--------|
+| `engineering-guardrails.mdc` | Architecture, OpenSpec, SPECBOOT gates |
+| `specboot-workflow.mdc` | Stage detection and command order |
+| `github-workflow.mdc` | Branches, issues, status, milestones, views, PRs |
+| `.github/PROJECT.md` | Project board setup and view recipes |

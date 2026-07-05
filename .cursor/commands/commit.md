@@ -25,6 +25,7 @@ Create a git commit after explicit user approval. No push unless explicitly requ
 5. Commit only when the user explicitly approves.
 6. Run `git status` after commit to confirm success.
 7. If pre-commit hook fails, fix and create a new commit (do not amend unless allowed).
+8. **GitHub:** if this completes a change, ensure PR is merged and issue is **Done** before deleting the branch.
 
 ## Outputs
 
@@ -38,4 +39,5 @@ Create a git commit after explicit user approval. No push unless explicitly requ
 ## Rules
 
 - Follow user git safety rules: no force push, no config changes, no push unless asked
+- Follow `github-workflow.mdc` for PR and issue closure
 - Never commit `.env` or credential files

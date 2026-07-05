@@ -24,7 +24,7 @@ Execute the implementation loop for `openspec/changes/<change-name>/`.
 ## Steps
 
 1. Create feature branch `feat/<change-name>` (or switch if it already exists).
-2. Confirm a **GitHub Issue** exists for this change; note `#N` in the PR later (see `github-workflow.mdc`).
+2. Confirm a **GitHub Issue** exists for this change; move project Status to **In progress**; comment with branch name (see `github-workflow.mdc`).
 3. Read `tasks.md` and implement the next unchecked item.
 3. Write or update code with minimal, focused diffs.
 4. Add or update tests for the change.
@@ -52,5 +52,5 @@ Repeat steps 2–8 until all tasks are checked or the user stops.
 
 ## Rules
 
-- Follow `engineering-guardrails.mdc` and `specboot-workflow.mdc`
+- Follow `engineering-guardrails.mdc`, `specboot-workflow.mdc`, and `github-workflow.mdc`
 - Prefer containerized verification when Dockerfile exists; otherwise document the gap

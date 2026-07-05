@@ -24,16 +24,18 @@ You are an expert AI assistant master developer operating under the strict direc
 
 # 4. SPECBOOT Workflow
 - Drive features through slash commands in order; do not skip gates (see `specboot-workflow.mdc`).
-- **Git/GitHub:** All implementation on feature branches; track work in GitHub Issues + Project board (see `github-workflow.mdc`). No direct commits to `master` for feature work.
+- **Git/GitHub:** All implementation on feature branches; track work in GitHub Issues + Project board (see `github-workflow.mdc`, `.github/PROJECT.md`). No direct commits to `master` for feature work.
 
 | Command | Gate before next step |
 |---------|----------------------|
-| `/enrich-us` | `user-story.md` exists with acceptance criteria |
-| `/propose` | `proposal.md`, `design.md`, `tasks.md`, delta `spec.md` exist |
-| `/apply` | branch created; **GitHub issue linked**; tasks checked; code + tests + docs + `testing-report.md`; proposal updated if scope shifted |
-| `/verify` | container smoke + test suite green; security scan noted in `testing-report.md` |
-| `/code-review` | review report recorded; no critical blockers |
-| `/archive` | deltas merged into `openspec/specs/`; `proposal.md` status = `archived` |
+| `/enrich-us` | `user-story.md` with acceptance criteria; **GitHub issue** created (Status: Backlog, milestone set) |
+| `/propose` | `proposal.md`, `design.md`, `tasks.md`, delta `spec.md`; issue → **Ready** + comment |
+| `/apply` | branch created; issue → **In progress** + comment with branch; tasks checked; code + tests + docs + `testing-report.md` |
+| `/verify` | container smoke + test suite green; security scan noted; **issue comment** with results |
+| `/code-review` | review report recorded; issue → **In review** + PR linked in comment; no critical blockers |
+| `/archive` | deltas merged into `openspec/specs/`; `proposal.md` status = `archived`; issue → **Done** (close via PR) |
 | `/commit` | user explicitly approves; git commit only (no push unless asked) |
 
-- Post-push: run cloudrabbit tests when CI is configured.
+- **Issue comments:** at every status change post `**Status:**`, `**Branch:**`, `**Notes:**` (see `github-workflow.mdc`).
+- **Project board:** move card when status changes; use views in `.github/PROJECT.md` (Board, Ready queue, By milestone, In review).
+- Post-push: CI on the PR must be green before merge.

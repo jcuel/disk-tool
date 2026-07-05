@@ -29,6 +29,7 @@ Merge approved delta specs into `openspec/specs/` and mark the change as archive
 3. Set `proposal.md` status to `archived`.
 4. Keep the change folder in place as historical record.
 5. Summarize what was merged.
+6. **GitHub:** after PR merge, move issue to **Done**; post final comment with merge commit; issue closes via `Closes #N` in PR body.
 
 ## Outputs
 
@@ -43,5 +44,5 @@ Merge approved delta specs into `openspec/specs/` and mark the change as archive
 
 ## Rules
 
-- Follow `engineering-guardrails.mdc` and `specboot-workflow.mdc`
+- Follow `engineering-guardrails.mdc`, `specboot-workflow.mdc`, and `github-workflow.mdc`
 - Do not commit, push, or delete the change folder

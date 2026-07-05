@@ -31,6 +31,7 @@ Create proposal artifacts under `openspec/changes/<change-name>/` from the refin
    - `tasks.md` (checkbox list aligned with implementation)
    - `specs/disk-tool/spec.md` (delta spec using ADDED/MODIFIED/REMOVED blocks)
 3. Map each acceptance criterion to at least one delta requirement or task.
+4. **GitHub:** move linked issue to Status **Ready**; comment with links to `proposal.md` and delta spec; confirm milestone.
 
 ## Outputs
 
@@ -44,5 +45,5 @@ Create proposal artifacts under `openspec/changes/<change-name>/` from the refin
 
 ## Rules
 
-- Follow `engineering-guardrails.mdc` and `specboot-workflow.mdc`
+- Follow `engineering-guardrails.mdc`, `specboot-workflow.mdc`, and `github-workflow.mdc`
 - Keep the delta spec focused on behavior changes, not implementation details

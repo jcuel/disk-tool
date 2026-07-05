@@ -33,6 +33,7 @@ Review the implementation against the delta spec, user story, and engineering gu
 4. Record findings in `testing-report.md` code review section:
    - Critical (must fix), Suggestion, Nice-to-have
 5. Set summary to `ready` only if no critical blockers remain.
+6. **GitHub:** move issue to Status **In review**; open or update draft PR (`Closes #N`); comment with PR URL and review summary.
 
 ## Outputs
 
@@ -46,5 +47,5 @@ Review the implementation against the delta spec, user story, and engineering gu
 
 ## Rules
 
-- Follow `engineering-guardrails.mdc` and `specboot-workflow.mdc`
+- Follow `engineering-guardrails.mdc`, `specboot-workflow.mdc`, and `github-workflow.mdc`
 - Do not commit or push
