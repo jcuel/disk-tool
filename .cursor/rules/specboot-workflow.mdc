@@ -18,6 +18,15 @@ Infer the current stage from artifacts in `openspec/changes/<change-name>/`:
 | Archiving | review complete, summary `ready` | `/archive` |
 | Committing | `proposal.md` status = `archived` | `/commit` |
 
+## GitHub Issue Linkage
+
+- Before `/apply`: ensure a GitHub Issue exists (or create one). Reference `openspec/changes/<change-name>/`.
+- During `/apply`: PR targets `master`; issue in **In progress** on the project board.
+- After `/verify` + `/code-review`: move issue to **In review**.
+- After merge + `/archive`: close issue via `Closes #N` in PR; move to **Done**.
+
+Branch naming: `feat/<change-name>`, `fix/<topic>`, `chore/<topic>` — see `github-workflow.mdc`.
+
 ## Gate Enforcement
 
 - Do not run `/propose` without `user-story.md`.

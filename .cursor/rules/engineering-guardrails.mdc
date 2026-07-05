@@ -24,12 +24,13 @@ You are an expert AI assistant master developer operating under the strict direc
 
 # 4. SPECBOOT Workflow
 - Drive features through slash commands in order; do not skip gates (see `specboot-workflow.mdc`).
+- **Git/GitHub:** All implementation on feature branches; track work in GitHub Issues + Project board (see `github-workflow.mdc`). No direct commits to `master` for feature work.
 
 | Command | Gate before next step |
 |---------|----------------------|
 | `/enrich-us` | `user-story.md` exists with acceptance criteria |
 | `/propose` | `proposal.md`, `design.md`, `tasks.md`, delta `spec.md` exist |
-| `/apply` | branch created; tasks checked; code + tests + docs + `testing-report.md`; proposal updated if scope shifted |
+| `/apply` | branch created; **GitHub issue linked**; tasks checked; code + tests + docs + `testing-report.md`; proposal updated if scope shifted |
 | `/verify` | container smoke + test suite green; security scan noted in `testing-report.md` |
 | `/code-review` | review report recorded; no critical blockers |
 | `/archive` | deltas merged into `openspec/specs/`; `proposal.md` status = `archived` |
