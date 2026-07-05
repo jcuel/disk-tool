@@ -109,7 +109,7 @@ docker compose run --rm smoke-api      # API smoke in Alpine
 
 OpenSpec layout: `openspec/`. Slash commands: `.cursor/commands/`.
 
-**Tracking:** Work is tracked in [GitHub Issues](https://github.com/jcuel/disk-tool/issues) and the **disk-tool** project board (no Jira). Each change links an issue → branch → PR → archive. See `.cursor/rules/github-workflow.mdc`.
+**Tracking:** [Issues](https://github.com/jcuel/disk-tool/issues) · [Project board](https://github.com/users/jcuel/projects/3) · [Milestones](https://github.com/jcuel/disk-tool/milestones). See [`.github/PROJECT.md`](.github/PROJECT.md) for status, comments, and views.
 
 ## Reuse for new projects
 

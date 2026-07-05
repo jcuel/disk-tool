@@ -21,19 +21,28 @@ Infer the current stage from artifacts in `openspec/changes/<change-name>/`:
 ## GitHub Issue Linkage
 
 - Before `/apply`: ensure a GitHub Issue exists (or create one). Reference `openspec/changes/<change-name>/`.
-- During `/apply`: PR targets `master`; issue in **In progress** on the project board.
-- After `/verify` + `/code-review`: move issue to **In review**.
-- After merge + `/archive`: close issue via `Closes #N` in PR; move to **Done**.
+- During `/apply`: PR targets `master`; issue **In progress** on the project board; comment with branch name.
+- After `/verify` + `/code-review`: move issue to **In review**; comment with PR link.
+- After merge + `/archive`: close issue via `Closes #N` in PR; move to **Done**; final comment with merge SHA.
 
 Branch naming: `feat/<change-name>`, `fix/<topic>`, `chore/<topic>` — see `github-workflow.mdc`.
 
 ## Gate Enforcement
 
-- Do not run `/propose` without `user-story.md`.
-- Do not run `/apply` without proposal artifacts and delta spec.
+- Do not run `/propose` without `user-story.md` and a linked GitHub issue.
+- Do not run `/apply` without proposal artifacts, delta spec, and issue moved to **Ready**.
 - Do not run `/verify` before implementation tasks are complete.
-- Do not run `/code-review` before verify checklist is filled.
-- Do not run `/archive` while critical review blockers exist.
+- Do not run `/code-review` before verify checklist is filled and issue commented.
+- Do not run `/archive` while critical review blockers exist or PR is unmerged.
 - Do not run `/commit` without explicit user approval.
 
 When the user invokes a command out of order, state the current stage and the required prerequisite command.
+
+## Rule files
+
+| File | Scope |
+|------|--------|
+| `engineering-guardrails.mdc` | Architecture, OpenSpec, SPECBOOT gates |
+| `specboot-workflow.mdc` | Stage detection and command order |
+| `github-workflow.mdc` | Branches, issues, status, milestones, views, PRs |
+| `.github/PROJECT.md` | Project board setup and view recipes |

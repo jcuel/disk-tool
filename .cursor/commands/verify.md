@@ -31,6 +31,7 @@ Run validation and record results in `testing-report.md`.
 4. Verify each acceptance criterion from `user-story.md`; record pass/fail.
 5. Update `testing-report.md` verify checklist and summary.
 6. Fix failures if straightforward; otherwise report blockers.
+7. **GitHub:** comment on the linked issue with verify results (pass/fail per acceptance criterion).
 
 ## Outputs
 
@@ -45,4 +46,4 @@ Run validation and record results in `testing-report.md`.
 
 ## Rules
 
-- Follow `engineering-guardrails.mdc` and `specboot-workflow.mdc`
+- Follow `engineering-guardrails.mdc`, `specboot-workflow.mdc`, and `github-workflow.mdc`

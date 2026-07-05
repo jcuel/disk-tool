@@ -24,6 +24,7 @@ Expand a raw user story into `openspec/changes/<change-name>/user-story.md` with
 2. Create `openspec/changes/<change-name>/` if it does not exist.
 3. Write `user-story.md` using the template: actors, goal, benefit, acceptance criteria, out-of-scope.
 4. Confirm the gate: acceptance criteria are testable and unambiguous.
+5. **GitHub:** create or link an issue titled `[<change-name>] …`; set project Status **Backlog**; assign milestone (v0.2 / v1.0 / Future); post initial comment with link to `user-story.md`.
 
 ## Outputs
 
@@ -36,5 +37,5 @@ Expand a raw user story into `openspec/changes/<change-name>/user-story.md` with
 
 ## Rules
 
-- Follow `engineering-guardrails.mdc` and `specboot-workflow.mdc`
+- Follow `engineering-guardrails.mdc`, `specboot-workflow.mdc`, and `github-workflow.mdc`
 - Do not create proposal artifacts yet — that is `/propose`
