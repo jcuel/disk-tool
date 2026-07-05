@@ -47,7 +47,19 @@ Project **Status** can drift when issues close via merged PRs.
 
 After a successful **CI** run on a push to `master`, [`.github/workflows/sync-project-board.yml`](../workflows/sync-project-board.yml) runs `scripts/sync-project-board.sh`.
 
-Requires repository secret **`GH_PROJECT_SYNC`**: a fine-grained or classic PAT with **`project`** and **`read:project`** scopes. The default `GITHUB_TOKEN` cannot write user-owned project boards.
+Requires repository secret **`GH_PROJECT_SYNC`**: a **classic** PAT (`ghp_…`) with **`project`** and **`repo`** scopes. Fine-grained PATs cannot write user-owned project boards ([GitHub docs](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token)). The default `GITHUB_TOKEN` cannot write user-owned project boards either.
+
+Create or rotate the secret:
+
+```powershell
+./scripts/setup-gh-project-sync-secret.ps1
+```
+
+```bash
+bash scripts/setup-gh-project-sync-secret.sh
+```
+
+Pre-filled token page: [classic PAT — project + repo](https://github.com/settings/tokens/new?scopes=project,repo&description=disk-tool-GH_PROJECT_SYNC). Pick an expiration (e.g. 90 days) and generate.
 
 If the secret is missing, the workflow skips sync with a log message (CI still passes).
 

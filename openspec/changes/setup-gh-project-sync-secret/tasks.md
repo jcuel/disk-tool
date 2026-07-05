@@ -1,0 +1,2 @@
+- [x] Add setup scripts (bash + PowerShell) with project API verification
+- [x] Document classic PAT requirement in `.github/PROJECT.md`
