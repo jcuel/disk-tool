@@ -684,6 +684,22 @@ startBtn.onclick = async () => {
   await beginScan(root);
 };
 
+async function applyOverviewCompleted() {
+  scanning = false;
+  startBtn.disabled = false;
+  cancelBtn.disabled = true;
+  progressFill.style.width = "100%";
+  progressText.textContent = "Overview ready — click a folder to drill down";
+  if (!scanId) return;
+  job = await getScan(scanId);
+  selectedPath = job.tree?.path || null;
+  exportJson.disabled = false;
+  exportHtml.disabled = false;
+  exportTicket.disabled = false;
+  copyTicket.disabled = false;
+  renderUI();
+}
+
 async function beginScan(root: string) {
   pathInput.value = root;
   void loadDiskSummary(root);
@@ -703,6 +719,9 @@ async function beginScan(root: string) {
     ws = connectEvents(scanId, async (ev) => {
       if (ev.type === "progress" || ev.type === "snapshot") {
         setProgress("Overview", ev);
+        if (ev.type === "snapshot" && ev.status === "completed") {
+          await applyOverviewCompleted();
+        }
       }
       if (ev.type === "expand-progress" || ev.type === "expand-started") {
         setProgress("Drill-down", ev);
@@ -721,17 +740,7 @@ async function beginScan(root: string) {
         startBtn.disabled = false;
         cancelBtn.disabled = true;
         if (ev.type === "completed") {
-          progressFill.style.width = "100%";
-          progressText.textContent = "Overview ready — click a folder to drill down";
-        }
-        if (scanId && ev.type === "completed") {
-          job = await getScan(scanId);
-          selectedPath = job.tree?.path || null;
-          exportJson.disabled = false;
-          exportHtml.disabled = false;
-          exportTicket.disabled = false;
-          copyTicket.disabled = false;
-          renderUI();
+          await applyOverviewCompleted();
         }
       }
     });

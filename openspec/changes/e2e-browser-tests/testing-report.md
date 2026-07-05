@@ -4,7 +4,7 @@
 
 - [x] `go test ./...`
 - [x] `scripts/smoke-api.ps1`
-- [ ] `scripts/e2e-run.sh` — pending CI `e2e-linux` job on PR
+- [x] `scripts/e2e-run.sh` — fixed WebSocket snapshot race for fast fixture scans
 - [x] Manual review: Cypress specs for overview, drill-down, layout
 
 **Security:** Cypress is a dev-only dependency installed at E2E runtime; no new production endpoints.

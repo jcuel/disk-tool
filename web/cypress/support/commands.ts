@@ -15,8 +15,8 @@ function visitWithScan(root: string, noAutoScan = false): void {
 }
 
 function waitForOverviewReady(): void {
-  cy.get("#progress-text", { timeout: 60000 }).should("contain", "Overview ready");
-  cy.get("#tree-table tbody tr.clickable", { timeout: 10000 }).should("have.length.at.least", 1);
+  cy.get("#tree-table tbody tr.clickable", { timeout: 60000 }).should("have.length.at.least", 1);
+  cy.get("#insights-summary").should("not.contain", "Run an overview scan");
 }
 
 declare global {
