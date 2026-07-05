@@ -75,6 +75,7 @@ Pipeline: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 | `test-windows` | windows-latest | `build.ps1`, govulncheck, [`scripts/smoke-api.ps1`](scripts/smoke-api.ps1) |
 | `docker-smoke` | ubuntu + Docker | CLI scan + in-container API smoke |
 | `security` | Trivy | Filesystem + container image (CRITICAL/HIGH) |
+| `sync` | ubuntu-latest | Project board sync after merge ([`sync-project-board.yml`](.github/workflows/sync-project-board.yml)) |
 
 **Local smoke**
 

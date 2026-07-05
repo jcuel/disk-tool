@@ -24,7 +24,7 @@ Infer the current stage from artifacts in `openspec/changes/<change-name>/`:
 - During `/apply`: PR targets `master`; issue **In progress** on the project board; comment with branch name.
 - After `/verify` + `/code-review`: move issue to **In review**; comment with PR link.
 - After merge + `/archive`: close issue via `Closes #N` in PR; move to **Done**; final comment with merge SHA.
-- After merge: run `scripts/sync-project-board.ps1` (or `.sh`) if the board card was not updated manually.
+- After merge: board sync runs automatically via CI (`sync-project-board.yml` after successful push to `master`). Run `scripts/sync-project-board.sh` locally only if the workflow was skipped (missing `GH_PROJECT_SYNC` secret).
 
 Branch naming: `feat/<change-name>`, `fix/<topic>`, `chore/<topic>` — see `github-workflow.mdc`.
 

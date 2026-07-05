@@ -41,7 +41,17 @@ On PR open, link the PR. On merge, note `/archive` and close.
 
 ## Sync board with issues
 
-Project **Status** can drift when issues close via merged PRs. Reconcile after merges:
+Project **Status** can drift when issues close via merged PRs.
+
+### Automatic (CI)
+
+After a successful **CI** run on a push to `master`, [`.github/workflows/sync-project-board.yml`](../workflows/sync-project-board.yml) runs `scripts/sync-project-board.sh`.
+
+Requires repository secret **`GH_PROJECT_SYNC`**: a fine-grained or classic PAT with **`project`** and **`read:project`** scopes. The default `GITHUB_TOKEN` cannot write user-owned project boards.
+
+If the secret is missing, the workflow skips sync with a log message (CI still passes).
+
+### Manual
 
 ```powershell
 ./scripts/sync-project-board.ps1
@@ -51,8 +61,10 @@ Project **Status** can drift when issues close via merged PRs. Reconcile after m
 bash scripts/sync-project-board.sh
 ```
 
+Board IDs live in [`scripts/project-board.env`](../scripts/project-board.env) (override via env vars if needed).
+
 - Closed issues on the board → **Done**
-- Open issues with `openspec/changes/<change>/proposal.md` still in **Backlog** → **Ready**
+- Open issues with `openspec/changes/<change>/proposal.md` still in **Backlog** → **Ready** (matches `/propose <change>` or change name in issue body)
 
 Requires `gh` with `project` scope. Run from repo root.
 
