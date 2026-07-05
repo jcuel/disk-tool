@@ -61,7 +61,8 @@ On Linux/macOS use `make build` if Make is available.
 | DELETE | `/api/scans/{id}` | Cancel overview scan |
 | POST | `/api/scans/{id}/expand` | Drill into folder `{ "path": "...", "depth": 5 }` |
 | WS | `/api/scans/{id}/events` | Progress + expand events |
-| GET | `/api/scans/{id}/export?format=json\|html` | Export report |
+| GET | `/api/scans/{id}/export?format=json\|html\|ticket` | Export report |
+| POST | `/api/scans/{id}/open` | Open path in OS file manager `{ "path": "..." }` |
 
 ## CI and smoke tests
 

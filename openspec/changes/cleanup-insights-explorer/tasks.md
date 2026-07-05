@@ -1,0 +1,4 @@
+- [x] API endpoint with PathWithinRoot guard
+- [x] Cross-platform OpenInFileManager
+- [x] UI Open buttons on tree, cleanup, files tables
+- [x] Unit tests for missing path

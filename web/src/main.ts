@@ -7,6 +7,7 @@ import {
   formatBytes,
   getScan,
   needsExpand,
+  openPath,
   startScan,
   type ScanJob,
   type ScanNode,
@@ -44,7 +45,7 @@ app.innerHTML = `
     <h2>Folder tree</h2>
     <div id="breadcrumb"></div>
     <table id="tree-table">
-      <thead><tr><th>Name</th><th>Size</th><th>%</th><th>Files</th><th></th></tr></thead>
+      <thead><tr><th>Name</th><th>Size</th><th>%</th><th>Files</th><th></th><th></th></tr></thead>
       <tbody></tbody>
     </table>
   </section>
@@ -59,7 +60,7 @@ app.innerHTML = `
     <h3>Cleanup candidates</h3>
     <p class="hint">Leftover project deps, caches, and downloads — review before deleting</p>
     <table id="cleanup-table">
-      <thead><tr><th>Type</th><th>Path</th><th>Size</th><th>Hint</th></tr></thead>
+      <thead><tr><th>Type</th><th>Path</th><th>Size</th><th>Hint</th><th></th></tr></thead>
       <tbody></tbody>
     </table>
   </section>
@@ -67,7 +68,7 @@ app.innerHTML = `
     <h2>Largest files</h2>
     <p class="hint">Updated as you drill into folders</p>
     <table id="files-table">
-      <thead><tr><th>Path</th><th>Size</th></tr></thead>
+      <thead><tr><th>Path</th><th>Size</th><th></th></tr></thead>
       <tbody></tbody>
     </table>
   </section>
@@ -133,6 +134,23 @@ async function refreshJob() {
   renderUI();
 }
 
+function makeOpenBtn(path: string): HTMLButtonElement {
+  const btn = document.createElement("button");
+  btn.textContent = "Open";
+  btn.className = "link-btn";
+  btn.type = "button";
+  btn.onclick = async (e) => {
+    e.stopPropagation();
+    if (!scanId) return;
+    try {
+      await openPath(scanId, path);
+    } catch (err) {
+      alert(String(err));
+    }
+  };
+  return btn;
+}
+
 function renderUI() {
   if (!job?.tree) return;
   const node = selectedPath ? findNode(job.tree, selectedPath) : job.tree;
@@ -169,6 +187,9 @@ function renderUI() {
     tr.className = "clickable";
     const badge = needsExpand(c) ? '<span class="badge">+</span>' : "";
     tr.innerHTML = `<td>${escapeHtml(c.name)}</td><td>${formatBytes(c.size)}</td><td>${pct(c.size, parentSize)}%</td><td>${c.fileCount}</td><td>${badge}</td>`;
+    const openTd = document.createElement("td");
+    openTd.appendChild(makeOpenBtn(c.path));
+    tr.appendChild(openTd);
     tr.onclick = () => selectPath(c.path, needsExpand(c));
     treeBody.appendChild(tr);
   }
@@ -181,6 +202,9 @@ function renderUI() {
   for (const f of job.largestFiles || []) {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td>${escapeHtml(f.path)}</td><td>${formatBytes(f.size)}</td>`;
+    const openTd = document.createElement("td");
+    openTd.appendChild(makeOpenBtn(f.path));
+    tr.appendChild(openTd);
     filesBody.appendChild(tr);
   }
 }
@@ -204,6 +228,9 @@ function renderInsights() {
     const tr = document.createElement("tr");
     tr.className = "clickable";
     tr.innerHTML = `<td><span class="badge-cat">${escapeHtml(c.category)}</span></td><td>${escapeHtml(c.path)}</td><td>${formatBytes(c.size)}</td><td>${escapeHtml(c.hint)}</td>`;
+    const openTd = document.createElement("td");
+    openTd.appendChild(makeOpenBtn(c.path));
+    tr.appendChild(openTd);
     tr.onclick = () => selectPath(c.path, true);
     cleanupBody.appendChild(tr);
   }

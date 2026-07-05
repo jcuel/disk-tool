@@ -37,6 +37,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/scans/{id}/expand", s.handleExpandScan)
 	mux.HandleFunc("GET /api/scans/{id}/events", s.handleScanEvents)
 	mux.HandleFunc("GET /api/scans/{id}/export", s.handleExport)
+	mux.HandleFunc("POST /api/scans/{id}/open", s.handleOpenPath)
 	if s.static != nil {
 		mux.Handle("/", s.static)
 	}
@@ -153,6 +154,37 @@ func (s *Server) handleScanEvents(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+}
+
+func (s *Server) handleOpenPath(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	job, ok := s.store.Get(id)
+	if !ok {
+		writeError(w, http.StatusNotFound, "scan not found")
+		return
+	}
+	var req struct {
+		Path string `json:"path"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	req.Path = SanitizePath(req.Path)
+	if req.Path == "" {
+		writeError(w, http.StatusBadRequest, "path is required")
+		return
+	}
+	abs, err := PathWithinRoot(job.Root, req.Path)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := OpenInFileManager(abs); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "opened", "path": abs})
 }
 
 func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {
