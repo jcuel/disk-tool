@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: OpenSpec changes
-    url: https://github.com/jcuel/disk-tool/tree/master/openspec/changes
+    url: https://github.com/jcuel/disk-tool/tree/dev/openspec/changes
     about: Browse in-repo change proposals and user stories
+  - name: Contributing
+    url: https://github.com/jcuel/disk-tool/blob/dev/CONTRIBUTING.md
+    about: Fork workflow, branch model, and PR guidelines
