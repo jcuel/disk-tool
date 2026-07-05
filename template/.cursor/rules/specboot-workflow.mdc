@@ -1,0 +1,48 @@
+---
+description: SPECBOOT stage detection and command gate enforcement
+alwaysApply: true
+---
+
+# SPECBOOT Workflow State Machine
+
+Infer the current stage from artifacts in `openspec/changes/<change-name>/`:
+
+| Stage | Artifacts present | Next command |
+|-------|-------------------|--------------|
+| Start | none | `/enrich-us` |
+| Enriched | `user-story.md` only | `/propose` |
+| Proposed | + `proposal.md`, `design.md`, `tasks.md`, delta spec | `/apply` |
+| Applying | branch + partial tasks | `/apply` (loop) or `/verify` when tasks done |
+| Verifying | all tasks checked + `testing-report.md` | `/verify` |
+| Reviewing | verify checklist complete, summary not ready | `/code-review` |
+| Archiving | review complete, summary `ready` | `/archive` |
+| Committing | `proposal.md` status = `archived` | `/commit` |
+
+## GitHub Issue Linkage
+
+- Before `/apply`: ensure a GitHub Issue exists (or create one). Reference `openspec/changes/<change-name>/`.
+- During `/apply`: PR targets `master`; issue **In progress** on the project board; comment with branch name.
+- After `/verify` + `/code-review`: move issue to **In review**; comment with PR link.
+- After merge + `/archive`: close issue via `Closes #N` in PR; move to **Done**; final comment with merge SHA.
+
+Branch naming: `feat/<change-name>`, `fix/<topic>`, `chore/<topic>` — see `github-workflow.mdc`.
+
+## Gate Enforcement
+
+- Do not run `/propose` without `user-story.md` and a linked GitHub issue.
+- Do not run `/apply` without proposal artifacts, delta spec, and issue moved to **Ready**.
+- Do not run `/verify` before implementation tasks are complete.
+- Do not run `/code-review` before verify checklist is filled and issue commented.
+- Do not run `/archive` while critical review blockers exist or PR is unmerged.
+- Do not run `/commit` without explicit user approval.
+
+When the user invokes a command out of order, state the current stage and the required prerequisite command.
+
+## Rule files
+
+| File | Scope |
+|------|--------|
+| `engineering-guardrails.mdc` | Architecture, OpenSpec, SPECBOOT gates |
+| `specboot-workflow.mdc` | Stage detection and command order |
+| `github-workflow.mdc` | Branches, issues, status, milestones, views, PRs |
+| `.github/PROJECT.md` | Project board setup and view recipes |

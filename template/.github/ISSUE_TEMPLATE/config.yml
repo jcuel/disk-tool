@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: OpenSpec changes
+    url: https://github.com/OWNER/REPO/tree/main/openspec/changes
+    about: Browse in-repo change proposals and user stories
