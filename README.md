@@ -76,6 +76,7 @@ Pipeline: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 | `test-linux` | ubuntu-latest | `go test`, govulncheck, build, [`scripts/smoke-api.sh`](scripts/smoke-api.sh) |
 | `test-windows` | windows-latest | `build.ps1`, govulncheck, [`scripts/smoke-api.ps1`](scripts/smoke-api.ps1) |
 | `docker-smoke` | ubuntu + Docker | CLI scan + in-container API smoke |
+| `e2e-linux` | ubuntu-latest | [`scripts/e2e-run.sh`](scripts/e2e-run.sh) — Cypress browser tests |
 | `security` | Trivy | Filesystem + container image (CRITICAL/HIGH) |
 | `sync` | ubuntu-latest | Project board sync after merge ([`sync-project-board.yml`](.github/workflows/sync-project-board.yml)) |
 
@@ -90,6 +91,12 @@ Pipeline: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 make build
 make smoke-api
 bash scripts/smoke-docker.sh   # requires Docker
+
+# Cypress E2E (Linux/WSL — builds server + runs headless browser tests)
+bash scripts/e2e-run.sh
+
+# Windows E2E (after ./build.ps1)
+.\scripts\e2e-run.ps1
 ```
 
 ## Docker

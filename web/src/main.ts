@@ -187,6 +187,14 @@ function pickDefaultRoot(roots: string[]): string {
   return drive || roots[0] || "";
 }
 
+function queryParams(): { root: string | null; noAutoScan: boolean } {
+  const params = new URLSearchParams(location.search);
+  return {
+    root: params.get("root"),
+    noAutoScan: params.get("noAutoScan") === "1",
+  };
+}
+
 fetchRoots().then(async (roots) => {
   for (const r of roots) {
     const opt = document.createElement("option");
@@ -194,12 +202,17 @@ fetchRoots().then(async (roots) => {
     opt.textContent = r;
     rootsSelect.appendChild(opt);
   }
-  const defaultRoot = pickDefaultRoot(roots);
-  if (defaultRoot) {
-    pathInput.value = defaultRoot;
-    rootsSelect.value = defaultRoot;
-    await loadDiskSummary(defaultRoot);
-    void beginScan(defaultRoot);
+  const { root: queryRoot, noAutoScan } = queryParams();
+  const scanRoot = queryRoot || pickDefaultRoot(roots);
+  if (scanRoot) {
+    pathInput.value = scanRoot;
+    if (roots.includes(scanRoot)) {
+      rootsSelect.value = scanRoot;
+    }
+    await loadDiskSummary(scanRoot);
+    if (!noAutoScan) {
+      void beginScan(scanRoot);
+    }
   }
 });
 
@@ -381,14 +394,15 @@ function renderInsights() {
   }
   insightsSummary.textContent = ins.summary;
   cleanupBody.innerHTML = "";
-  cleanupToolbar.classList.toggle("hidden", ins.cleanupCandidates.length === 0);
-  if (ins.cleanupCandidates.length === 0) {
+  const candidates = ins.cleanupCandidates || [];
+  cleanupToolbar.classList.toggle("hidden", candidates.length === 0);
+  if (candidates.length === 0) {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td colspan="6" class="muted">No known cleanup patterns yet — drill into Users, Projects, or Downloads</td>`;
     cleanupBody.appendChild(tr);
     return;
   }
-  for (const c of ins.cleanupCandidates) {
+  for (const c of candidates) {
     const tr = document.createElement("tr");
     tr.className = "clickable";
     const checkTd = document.createElement("td");
@@ -671,6 +685,22 @@ startBtn.onclick = async () => {
   await beginScan(root);
 };
 
+async function applyOverviewCompleted() {
+  scanning = false;
+  startBtn.disabled = false;
+  cancelBtn.disabled = true;
+  progressFill.style.width = "100%";
+  progressText.textContent = "Overview ready — click a folder to drill down";
+  if (!scanId) return;
+  job = await getScan(scanId);
+  selectedPath = job.tree?.path || null;
+  exportJson.disabled = false;
+  exportHtml.disabled = false;
+  exportTicket.disabled = false;
+  copyTicket.disabled = false;
+  renderUI();
+}
+
 async function beginScan(root: string) {
   pathInput.value = root;
   void loadDiskSummary(root);
@@ -690,6 +720,9 @@ async function beginScan(root: string) {
     ws = connectEvents(scanId, async (ev) => {
       if (ev.type === "progress" || ev.type === "snapshot") {
         setProgress("Overview", ev);
+        if (ev.type === "snapshot" && ev.status === "completed") {
+          await applyOverviewCompleted();
+        }
       }
       if (ev.type === "expand-progress" || ev.type === "expand-started") {
         setProgress("Drill-down", ev);
@@ -708,17 +741,7 @@ async function beginScan(root: string) {
         startBtn.disabled = false;
         cancelBtn.disabled = true;
         if (ev.type === "completed") {
-          progressFill.style.width = "100%";
-          progressText.textContent = "Overview ready — click a folder to drill down";
-        }
-        if (scanId && ev.type === "completed") {
-          job = await getScan(scanId);
-          selectedPath = job.tree?.path || null;
-          exportJson.disabled = false;
-          exportHtml.disabled = false;
-          exportTicket.disabled = false;
-          copyTicket.disabled = false;
-          renderUI();
+          await applyOverviewCompleted();
         }
       }
     });
