@@ -24,7 +24,8 @@ Execute the implementation loop for `openspec/changes/<change-name>/`.
 ## Steps
 
 1. Create feature branch `feat/<change-name>` (or switch if it already exists).
-2. Read `tasks.md` and implement the next unchecked item.
+2. Confirm a **GitHub Issue** exists for this change; note `#N` in the PR later (see `github-workflow.mdc`).
+3. Read `tasks.md` and implement the next unchecked item.
 3. Write or update code with minimal, focused diffs.
 4. Add or update tests for the change.
 5. Update relevant documentation.
