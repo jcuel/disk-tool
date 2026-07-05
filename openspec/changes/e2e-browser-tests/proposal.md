@@ -1,7 +1,7 @@
 # Proposal: Cypress E2E browser tests
 
 **Change:** e2e-browser-tests
-**Status:** in-review
+**Status:** archived
 
 ## Summary
 
