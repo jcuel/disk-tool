@@ -25,22 +25,37 @@ No Jira — track work in **GitHub Issues** and the repo **Project board**. Open
   - Acceptance criteria (copy from `user-story.md` or task list)
   - Target branch name
 - Labels: `change`, `area:*`, `priority:*` as applicable.
+- **Comments:** when status changes, post `**Status:**`, `**Branch:**`, `**Notes:**` on the issue (see `.github/PROJECT.md`).
 - Close the issue in the PR description (`Closes #N`) when merging after `/archive`.
 
 ## Project board
 
-- Repo project: **disk-tool** (GitHub Projects v2).
-- Status columns map to SPECBOOT stages:
+- Board: **disk-tool** — https://github.com/users/jcuel/projects/3
+- Setup guide: [`.github/PROJECT.md`](../.github/PROJECT.md)
 
-| Column | SPECBOOT stage |
+### Status (update on every stage change)
+
+| Status | SPECBOOT stage |
 |--------|----------------|
 | Backlog | `/enrich-us` or `/propose` not started |
-| Ready | proposal artifacts complete, issue open |
+| Ready | Scoped; proposal done or N/A; pick up next |
 | In progress | branch + `/apply` |
-| In review | PR open, `/verify` + `/code-review` |
-| Done | merged to `master`, `/archive` complete |
+| In review | PR open; `/verify` + `/code-review` |
+| Done | merged to `master`; `/archive` complete |
 
-- Move the linked issue when changing stage; keep OpenSpec `tasks.md` in sync.
+Move the card on the board **and** leave a brief issue comment (status, branch, next step).
+
+### Milestones
+
+- **v0.2 — Fixes & tooling** — bugs, CI, docs chores
+- **v1.0 — Cleanup insights v2** — explorer, safe delete
+- **Future** — needs `/propose` before `/apply`
+
+Assign milestone at issue creation. Use the **By milestone** project view to plan releases.
+
+### Views
+
+Create in the project UI (see `.github/PROJECT.md`): **Board** (group by Status), **Ready queue**, **By milestone**, **In review**.
 
 ## Pull requests
 

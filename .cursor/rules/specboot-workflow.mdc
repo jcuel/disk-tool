@@ -21,9 +21,9 @@ Infer the current stage from artifacts in `openspec/changes/<change-name>/`:
 ## GitHub Issue Linkage
 
 - Before `/apply`: ensure a GitHub Issue exists (or create one). Reference `openspec/changes/<change-name>/`.
-- During `/apply`: PR targets `master`; issue in **In progress** on the project board.
-- After `/verify` + `/code-review`: move issue to **In review**.
-- After merge + `/archive`: close issue via `Closes #N` in PR; move to **Done**.
+- During `/apply`: PR targets `master`; issue **In progress** on the project board; comment with branch name.
+- After `/verify` + `/code-review`: move issue to **In review**; comment with PR link.
+- After merge + `/archive`: close issue via `Closes #N` in PR; move to **Done**; final comment with merge SHA.
 
 Branch naming: `feat/<change-name>`, `fix/<topic>`, `chore/<topic>` — see `github-workflow.mdc`.
 
