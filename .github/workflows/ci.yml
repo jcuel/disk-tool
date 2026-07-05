@@ -125,6 +125,7 @@ jobs:
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           RUN_ID: ${{ github.run_id }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: bash scripts/e2e-pr-screenshots-comment.sh
 
       - name: Comment PR with inline screenshots
