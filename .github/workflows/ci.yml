@@ -153,16 +153,22 @@ jobs:
     name: Security — Trivy
     runs-on: ubuntu-latest
     needs: [test-linux]
+    permissions:
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
       - name: Trivy filesystem scan
+        id: trivy-fs
         uses: aquasecurity/trivy-action@v0.36.0
+        continue-on-error: true
         with:
           scan-type: fs
           scan-ref: .
           severity: CRITICAL,HIGH
           exit-code: "1"
+          format: table
+          output: trivy-fs.txt
           skip-dirs: web/node_modules
           trivyignores: .trivyignore
 
@@ -170,9 +176,45 @@ jobs:
         run: docker build -t disk-tool:ci .
 
       - name: Trivy image scan
+        id: trivy-image
         uses: aquasecurity/trivy-action@v0.36.0
+        continue-on-error: true
         with:
           scan-type: image
           image-ref: disk-tool:ci
           severity: CRITICAL,HIGH
           exit-code: "1"
+          format: table
+          output: trivy-image.txt
+
+      - name: Prepare Trivy PR comment
+        if: github.event_name == 'pull_request' && always()
+        env:
+          RUN_ID: ${{ github.run_id }}
+          FS_OUTCOME: ${{ steps.trivy-fs.outcome }}
+          IMAGE_OUTCOME: ${{ steps.trivy-image.outcome }}
+        run: bash scripts/trivy-pr-comment.sh
+
+      - name: Comment PR with Trivy report
+        if: github.event_name == 'pull_request' && always()
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-tag: trivy-security-report
+          edit-mode: replace
+          body-path: .trivy-pr-comment.md
+
+      - name: Upload Trivy reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-reports-pr-${{ github.event.pull_request.number || github.run_number }}
+          path: |
+            trivy-fs.txt
+            trivy-image.txt
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Fail if Trivy found issues
+        if: steps.trivy-fs.outcome == 'failure' || steps.trivy-image.outcome == 'failure'
+        run: exit 1
