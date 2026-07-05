@@ -33,6 +33,7 @@ func RunCleanup(job *model.ScanJob, req model.CleanupRequest) (*model.CleanupRep
 		}
 	}
 
+	knownSizes := candidateSizes(job)
 	categories := candidateCategories(job)
 	unique := dedupePaths(req.Paths)
 	items := make([]pathItem, 0, len(unique))
@@ -41,15 +42,7 @@ func RunCleanup(job *model.ScanJob, req model.CleanupRequest) (*model.CleanupRep
 		if p == "" {
 			continue
 		}
-		size := int64(0)
-		if info, err := os.Stat(p); err == nil {
-			if info.IsDir() {
-				size = dirSize(p)
-			} else {
-				size = info.Size()
-			}
-		}
-		items = append(items, pathItem{path: p, size: size})
+		items = append(items, pathItem{path: p, size: lookupCandidateSize(p, knownSizes)})
 	}
 	sort.Slice(items, func(i, j int) bool {
 		return items[i].size > items[j].size
@@ -97,11 +90,8 @@ func RunCleanup(job *model.ScanJob, req model.CleanupRequest) (*model.CleanupRep
 			report.Results = append(report.Results, result)
 			continue
 		}
-		if info.IsDir() {
-			result.Size = dirSize(abs)
-		} else {
-			result.Size = info.Size()
-		}
+
+		result.Size = resolveItemSize(abs, knownSizes, req.DryRun, info)
 
 		if PathInUse(abs) {
 			result.Status = model.CleanupStatusSkippedLocked
@@ -136,6 +126,37 @@ func RunCleanup(job *model.ScanJob, req model.CleanupRequest) (*model.CleanupRep
 	report.FinishedAt = time.Now().UTC()
 	report.ReportText = model.BuildCleanupReportText(report)
 	return report, nil
+}
+
+func lookupCandidateSize(path string, known map[string]int64) int64 {
+	if s, ok := known[filepath.Clean(path)]; ok {
+		return s
+	}
+	return 0
+}
+
+func resolveItemSize(abs string, known map[string]int64, dryRun bool, info os.FileInfo) int64 {
+	if s, ok := known[filepath.Clean(abs)]; ok && s > 0 {
+		return s
+	}
+	if !info.IsDir() {
+		return info.Size()
+	}
+	if dryRun {
+		return 0
+	}
+	return dirSize(abs)
+}
+
+func candidateSizes(job *model.ScanJob) map[string]int64 {
+	out := make(map[string]int64)
+	if job == nil || job.Insights == nil {
+		return out
+	}
+	for _, c := range job.Insights.CleanupCandidates {
+		out[filepath.Clean(c.Path)] = c.Size
+	}
+	return out
 }
 
 func dedupePaths(paths []string) []string {
