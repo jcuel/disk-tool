@@ -1,4 +1,6 @@
 /web/node_modules
 /web/dist
+/web/cypress/screenshots
+/web/cypress/videos
 /bin
 *.exe

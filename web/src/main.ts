@@ -187,6 +187,14 @@ function pickDefaultRoot(roots: string[]): string {
   return drive || roots[0] || "";
 }
 
+function queryParams(): { root: string | null; noAutoScan: boolean } {
+  const params = new URLSearchParams(location.search);
+  return {
+    root: params.get("root"),
+    noAutoScan: params.get("noAutoScan") === "1",
+  };
+}
+
 fetchRoots().then(async (roots) => {
   for (const r of roots) {
     const opt = document.createElement("option");
@@ -194,12 +202,17 @@ fetchRoots().then(async (roots) => {
     opt.textContent = r;
     rootsSelect.appendChild(opt);
   }
-  const defaultRoot = pickDefaultRoot(roots);
-  if (defaultRoot) {
-    pathInput.value = defaultRoot;
-    rootsSelect.value = defaultRoot;
-    await loadDiskSummary(defaultRoot);
-    void beginScan(defaultRoot);
+  const { root: queryRoot, noAutoScan } = queryParams();
+  const scanRoot = queryRoot || pickDefaultRoot(roots);
+  if (scanRoot) {
+    pathInput.value = scanRoot;
+    if (roots.includes(scanRoot)) {
+      rootsSelect.value = scanRoot;
+    }
+    await loadDiskSummary(scanRoot);
+    if (!noAutoScan) {
+      void beginScan(scanRoot);
+    }
   }
 });
 
