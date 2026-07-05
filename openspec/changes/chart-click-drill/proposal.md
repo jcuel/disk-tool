@@ -1,7 +1,7 @@
 # Proposal: Chart click drill-down and layout balance
 
 **Change:** chart-click-drill
-**Status:** in-review
+**Status:** archived
 
 ## Summary
 
