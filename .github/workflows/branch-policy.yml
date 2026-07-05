@@ -1,0 +1,33 @@
+name: Branch policy
+
+on:
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  master-target-policy:
+    name: Policy — master is maintainer-only
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject PRs that are not dev → master
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          THIS_REPO: ${{ github.repository }}
+        run: |
+          if [ "$BASE_REF" != "master" ]; then
+            echo "Not targeting master; skipping."
+            exit 0
+          fi
+
+          if [ "$HEAD_REPO" = "$THIS_REPO" ] && [ "$HEAD_REF" = "dev" ]; then
+            echo "Allowed release integration: dev → master."
+            exit 0
+          fi
+
+          echo "::error title=Branch policy::Pull requests must target dev. Only maintainer release PRs (dev → master) may target master. See CONTRIBUTING.md."
+          exit 1

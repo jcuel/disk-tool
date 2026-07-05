@@ -1,0 +1,49 @@
+{
+  "name": "master — release branch",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["refs/heads/master"],
+      "exclude": []
+    }
+  },
+  "rules": [
+    { "type": "creation" },
+    { "type": "update" },
+    { "type": "deletion" },
+    {
+      "type": "pull_request",
+      "parameters": {
+        "required_approving_review_count": 0,
+        "dismiss_stale_reviews_on_push": false,
+        "require_code_owner_review": false,
+        "require_last_push_approval": false,
+        "required_review_thread_resolution": false,
+        "allowed_merge_methods": ["merge", "squash", "rebase"]
+      }
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": true,
+        "required_status_checks": [
+          { "context": "Linux — unit + API smoke" },
+          { "context": "Windows — unit + API smoke" },
+          { "context": "Linux — Docker smoke" },
+          { "context": "Linux — Cypress E2E" },
+          { "context": "Security — Trivy" },
+          { "context": "Policy — master is maintainer-only" }
+        ]
+      }
+    },
+    { "type": "non_fast_forward" }
+  ],
+  "bypass_actors": [
+    {
+      "actor_id": 5,
+      "actor_type": "RepositoryRole",
+      "bypass_mode": "pull_request"
+    }
+  ]
+}

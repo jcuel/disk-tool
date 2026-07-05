@@ -11,10 +11,29 @@ Thank you for your interest in contributing. This project welcomes collaboration
 
 **Contributors:** fork the repo, branch from `dev`, and open pull requests **into `dev`**.
 
-**Do not** open PRs targeting `master` unless you are the maintainer performing a release integration.
+**Do not** open PRs targeting `master` unless you are the maintainer performing a release integration (`dev` → `master` only).
 
 ```
 fork ──► feat/your-change ──► PR ──► dev ──► (maintainer) ──► master
+```
+
+## Enforced branch rules (GitHub)
+
+These policies are applied via [repository rulesets](https://github.com/jcuel/disk-tool/settings/rules) (not documentation-only):
+
+| Branch | Enforcement |
+|--------|-------------|
+| **`dev`** | Pull request required; CI must pass; no force-push; branch cannot be deleted |
+| **`master`** | Direct pushes blocked (admin bypass via PR only); pull request required; CI + branch-policy must pass; no force-push; branch cannot be deleted |
+
+Required CI checks: Linux/Windows unit smoke, Docker smoke, Cypress E2E, Trivy security scan.
+
+Contributors opening a PR to `master` (other than maintainer `dev` → `master`) will fail the **Policy — master is maintainer-only** check.
+
+Ruleset definitions live in [`.github/rulesets/`](.github/rulesets/). Maintainers can re-apply after edits:
+
+```bash
+bash scripts/apply-branch-rulesets.sh
 ```
 
 ## Getting started
