@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/jcuel/disk-tool/internal/diskspace"
 	"github.com/jcuel/disk-tool/internal/model"
 	"github.com/jcuel/disk-tool/internal/scanner"
 )
@@ -32,6 +34,7 @@ func NewServer(store *Store, static http.Handler) *Server {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/roots", s.handleRoots)
+	mux.HandleFunc("GET /api/disk", s.handleDisk)
 	mux.HandleFunc("POST /api/scans", s.handleStartScan)
 	mux.HandleFunc("GET /api/scans/{id}", s.handleGetScan)
 	mux.HandleFunc("DELETE /api/scans/{id}", s.handleCancelScan)
@@ -49,6 +52,22 @@ func (s *Server) Handler() http.Handler {
 
 func (s *Server) handleRoots(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"roots": CommonRoots()})
+}
+
+func (s *Server) handleDisk(w http.ResponseWriter, r *http.Request) {
+	path := SanitizePath(r.URL.Query().Get("path"))
+	if path == "" {
+		path = string(os.PathSeparator)
+		if vol := os.Getenv("SystemDrive"); vol != "" {
+			path = vol + string(os.PathSeparator)
+		}
+	}
+	info, err := diskspace.ForPath(path)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, info)
 }
 
 func (s *Server) handleStartScan(w http.ResponseWriter, r *http.Request) {

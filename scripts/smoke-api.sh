@@ -33,6 +33,9 @@ done
 curl -sf "$BASE/api/roots" | grep -q 'roots'
 echo "OK /api/roots"
 
+curl -sf "$BASE/api/disk?path=$ROOT" | grep -q '"total"'
+echo "OK GET /api/disk"
+
 SCAN_JSON=$(curl -sf -X POST "$BASE/api/scans" \
   -H 'Content-Type: application/json' \
   -d "{\"root\":\"$ROOT\"}")

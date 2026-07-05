@@ -134,7 +134,10 @@ button:disabled {
 .layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto auto auto;
+  grid-template-areas:
+    "tree charts"
+    "tree files"
+    "insights insights";
   gap: 1rem;
   padding: 1rem 1.5rem;
 }
@@ -153,12 +156,13 @@ button:disabled {
 }
 
 .tree-panel {
-  grid-row: span 2;
+  grid-area: tree;
   max-height: 70vh;
 }
 
 .insights-panel {
-  grid-column: 1 / -1;
+  grid-area: insights;
+  grid-column: auto;
 }
 
 .insights-panel h3 {
@@ -177,11 +181,57 @@ button:disabled {
 }
 
 .files-panel {
-  grid-column: 2;
+  grid-area: files;
 }
 
 .charts-panel {
-  grid-column: 2;
+  grid-area: charts;
+}
+
+.disk-summary {
+  margin: 0 1.5rem 0;
+  display: grid;
+  grid-template-columns: 1fr min(240px, 36%);
+  gap: 1rem;
+  align-items: center;
+}
+
+.disk-summary h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.disk-stats {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.disk-stats dt {
+  color: var(--muted);
+  margin: 0;
+}
+
+.disk-stats dd {
+  margin: 0;
+  font-weight: 500;
+}
+
+.disk-pie-chart {
+  height: 160px;
+  margin: 0;
+}
+
+.path-cell {
+  word-break: break-all;
+  max-width: 0;
+  min-width: 120px;
+}
+
+.actions-cell {
+  white-space: nowrap;
 }
 
 .chart {
@@ -247,12 +297,20 @@ tr.clickable:hover {
 @media (max-width: 900px) {
   .layout {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "tree"
+      "charts"
+      "files"
+      "insights";
+  }
+  .disk-summary {
+    grid-template-columns: 1fr;
   }
   .tree-panel,
   .charts-panel,
   .files-panel,
   .insights-panel {
-    grid-column: 1;
+    grid-column: auto;
     grid-row: auto;
     max-height: none;
   }

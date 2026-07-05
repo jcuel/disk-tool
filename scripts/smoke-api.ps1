@@ -25,6 +25,10 @@ try {
     if (-not $ready) { throw "server not ready" }
     Write-Host "OK /api/roots"
 
+    $disk = Invoke-RestMethod "$Base/api/disk?path=$([uri]::EscapeDataString($Root))"
+    if (-not $disk.total) { throw "disk info failed" }
+    Write-Host "OK GET /api/disk"
+
     $body = @{ root = $Root } | ConvertTo-Json
     $scan = Invoke-RestMethod -Method POST -Uri "$Base/api/scans" -ContentType "application/json" -Body $body
     $scanId = $scan.scanId

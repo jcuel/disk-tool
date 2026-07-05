@@ -4,13 +4,43 @@ import { formatBytes } from "./api";
 
 let treemapChart: echarts.ECharts | null = null;
 let barChart: echarts.ECharts | null = null;
+let diskPieChart: echarts.ECharts | null = null;
 
-export function initCharts(treemapEl: HTMLElement, barEl: HTMLElement) {
+export function initCharts(treemapEl: HTMLElement, barEl: HTMLElement, diskPieEl?: HTMLElement) {
   treemapChart = echarts.init(treemapEl);
   barChart = echarts.init(barEl);
+  if (diskPieEl) {
+    diskPieChart = echarts.init(diskPieEl);
+  }
   window.addEventListener("resize", () => {
     treemapChart?.resize();
     barChart?.resize();
+    diskPieChart?.resize();
+  });
+}
+
+export function renderDiskPie(free: number, used: number) {
+  if (!diskPieChart) return;
+  diskPieChart.setOption({
+    tooltip: {
+      trigger: "item",
+      formatter: (p: { name: string; value: number; percent: number }) =>
+        `${p.name}<br/>${formatBytes(p.value)} (${p.percent.toFixed(1)}%)`,
+    },
+    legend: { bottom: 0, textStyle: { color: "#8b949e" } },
+    series: [
+      {
+        type: "pie",
+        radius: ["45%", "70%"],
+        center: ["50%", "45%"],
+        avoidLabelOverlap: true,
+        label: { show: false },
+        data: [
+          { name: "Free", value: free, itemStyle: { color: "#238636" } },
+          { name: "Used", value: used, itemStyle: { color: "#388bfd" } },
+        ],
+      },
+    ],
   });
 }
 
