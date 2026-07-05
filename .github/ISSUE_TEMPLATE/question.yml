@@ -1,0 +1,26 @@
+name: Question
+description: Ask about usage, development, or design
+title: "[question] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For usage or development questions. Not for bugs (use **Bug report**) or feature requests (use **OpenSpec change**).
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What you tried, versions, platform, relevant logs
+      placeholder: |
+        - OS: Windows 11
+        - Branch: dev
+        - Goal: …

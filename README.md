@@ -130,6 +130,7 @@ OpenSpec layout: `openspec/`. Slash commands: `.cursor/commands/`.
 | Document | Purpose |
 |----------|---------|
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Fork → `dev` workflow, tests, PR expectations |
+| [Issue templates](.github/ISSUE_TEMPLATE/) | Bug, OpenSpec change, chore, question |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
 | [SECURITY.md](SECURITY.md) | Vulnerability reporting |
 | [LICENSE](LICENSE) | PolyForm Noncommercial — collaborate freely; commercial use requires permission |

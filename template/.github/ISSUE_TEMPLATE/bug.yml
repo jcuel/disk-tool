@@ -3,29 +3,44 @@ description: Report a defect
 title: "[bug] "
 labels: ["bug"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        PRs for fixes should target **`dev`**. See CONTRIBUTING.md.
+        Do **not** use this form for security vulnerabilities — use Security Advisories instead.
+
   - type: textarea
     id: summary
     attributes:
       label: Summary
     validations:
       required: true
+
   - type: textarea
     id: repro
     attributes:
       label: Steps to reproduce
-      placeholder: |
-        1. 
-        2. 
     validations:
       required: true
+
   - type: textarea
     id: expected
     attributes:
       label: Expected behavior
     validations:
       required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
   - type: input
     id: branch
     attributes:
       label: Suggested fix branch
       placeholder: fix/short-topic
+    validations:
+      required: true

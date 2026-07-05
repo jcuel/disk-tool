@@ -37,6 +37,7 @@ fork ──► feat/your-change ──► PR ──► dev ──► (maintainer
 ## Pull requests
 
 - Use the [pull request template](.github/pull_request_template.md).
+- Open issues via [GitHub issue templates](.github/ISSUE_TEMPLATE/) (bug, OpenSpec change, chore, question).
 - Link a GitHub issue when the work is non-trivial (`Closes #N` in the description).
 - Keep PRs focused; one logical change per PR.
 - CI must pass before merge.

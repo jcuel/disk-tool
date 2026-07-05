@@ -8,25 +8,26 @@ body:
     attributes:
       label: Change name
       description: Folder under openspec/changes/
-      placeholder: cleanup-insights
+      placeholder: my-change
     validations:
       required: true
+
   - type: textarea
     id: summary
     attributes:
       label: Summary
-      description: What problem does this solve?
     validations:
       required: true
+
   - type: textarea
     id: acceptance
     attributes:
       label: Acceptance criteria
-      description: Copy from user-story.md or define here
       value: |
-        - [ ] 
+        - [ ]
     validations:
       required: true
+
   - type: input
     id: branch
     attributes:
