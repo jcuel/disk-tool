@@ -1,0 +1,33 @@
+name: Chore / tooling
+description: CI, docs, dependencies, or repo maintenance
+title: "[chore] "
+labels: ["chore"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Small repo or CI changes that do not need a full OpenSpec change.
+        PRs target **`dev`**. Branch from `upstream/dev` as `chore/<topic>`.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Files or systems affected (CI, README, dependabot, etc.)
+    validations:
+      required: true
+
+  - type: input
+    id: branch
+    attributes:
+      label: Target branch
+      placeholder: chore/short-topic
+    validations:
+      required: true
