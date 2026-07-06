@@ -7,6 +7,8 @@
 - [ ] This PR targets **`dev`** (required for contributor changes)
 - [ ] Maintainer release: **`dev` → `master`** (maintainer only)
 
+For maintainer releases, add **`Release-Version: X.Y.Z`** below (e.g. `Release-Version: 1.1.0`) so CI tags the correct semver. If omitted, the release workflow bumps the **minor** version automatically.
+
 ## Linked issue
 
 Closes #<!-- issue number, or "N/A — chore/docs" -->

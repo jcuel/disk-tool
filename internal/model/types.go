@@ -58,8 +58,15 @@ type ScanJob struct {
 	FilesScanned int64       `json:"filesScanned"`
 	BytesScanned int64       `json:"bytesScanned"`
 	CurrentPath       string          `json:"currentPath"`
-	Insights          *InsightsReport `json:"insights,omitempty"`
-	LastCleanupReport *CleanupReport  `json:"lastCleanupReport,omitempty"`
+	Insights          *InsightsReport   `json:"insights,omitempty"`
+	LastCleanupReport *CleanupReport    `json:"lastCleanupReport,omitempty"`
+	DuplicateGroups   []DuplicateGroup  `json:"duplicateGroups,omitempty"`
+	InsightsConfig    InsightsConfig    `json:"insightsConfig,omitempty"`
+}
+
+type InsightsConfig struct {
+	AgeThresholdDays int   `json:"ageThresholdDays"`
+	MinSizeBytes     int64 `json:"minSizeBytes"`
 }
 
 type ScanResponse struct {
@@ -67,7 +74,8 @@ type ScanResponse struct {
 }
 
 type StartScanRequest struct {
-	Root string `json:"root"`
+	Root           string                `json:"root"`
+	InsightsConfig *InsightsConfig `json:"insightsConfig,omitempty"`
 }
 
 type ExpandScanRequest struct {

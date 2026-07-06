@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/jcuel/disk-tool/internal/model"
+	"github.com/jcuel/disk-tool/internal/safety"
 )
 
 const maxLargestFiles = 100
@@ -122,6 +123,10 @@ func (sc *Scanner) ScanOverview(ctx context.Context, opts Options) (*model.ScanN
 			continue
 		}
 
+		if entry.IsDir() && shouldSkipDir(full) {
+			continue
+		}
+
 		if entry.IsDir() {
 			wg.Add(1)
 			go func(dirPath, dirName string) {
@@ -220,6 +225,10 @@ func (sc *Scanner) ScanBranch(ctx context.Context, branchPath, scanRoot string, 
 				continue
 			}
 
+			if entry.IsDir() && shouldSkipDir(full) {
+				continue
+			}
+
 			if entry.IsDir() {
 				if atLimit {
 					size, files, err := sc.aggregateDir(ctx, full, st, opts)
@@ -309,6 +318,10 @@ func (sc *Scanner) Scan(ctx context.Context, opts Options) (*model.ScanNode, []m
 				continue
 			}
 
+			if entry.IsDir() && shouldSkipDir(full) {
+				continue
+			}
+
 			if entry.IsDir() {
 				child, err := scanDir(full)
 				if err != nil {
@@ -363,6 +376,10 @@ func (sc *Scanner) aggregateDir(ctx context.Context, dir string, st *walkState, 
 			full := filepath.Join(path, name)
 
 			if entry.Type()&os.ModeSymlink != 0 && skipSymlink(full, st.visited) {
+				continue
+			}
+
+			if entry.IsDir() && shouldSkipDir(full) {
 				continue
 			}
 
@@ -493,6 +510,10 @@ func recomputeAncestors(root *model.ScanNode, fromPath string) {
 	// Sizes from overview aggregates remain valid; only refresh parent chain file counts if needed.
 	_ = fromPath
 	_ = root
+}
+
+func shouldSkipDir(path string) bool {
+	return safety.ShouldSkipScan(path)
 }
 
 func skipSymlink(path string, visited map[visitKey]struct{}) bool {

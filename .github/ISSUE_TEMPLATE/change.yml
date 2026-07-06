@@ -57,7 +57,8 @@ body:
     attributes:
       label: Milestone (suggested)
       options:
-        - v0.2 — Fixes & tooling
+        - v1.1 — Safety & maintenance
         - v1.0 — Cleanup insights v2
+        - v0.2 — Fixes & tooling
         - Future
         - Unsure

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jcuel/disk-tool/internal/model"
+	"github.com/jcuel/disk-tool/internal/safety"
 )
 
 const cleanupConfirmPhrase = "DELETE"
@@ -74,6 +75,14 @@ func RunCleanup(job *model.ScanJob, req model.CleanupRequest) (*model.CleanupRep
 		if abs == rootAbs {
 			result.Status = model.CleanupStatusSkippedScanRoot
 			result.Reason = "cannot delete scan root"
+			report.Results = append(report.Results, result)
+			continue
+		}
+
+		zone := safety.ClassifyPath(abs)
+		if !safety.IsDeletable(zone) {
+			result.Status = model.CleanupStatusSkippedProtected
+			result.Reason = "protected zone: " + string(zone)
 			report.Results = append(report.Results, result)
 			continue
 		}
@@ -209,7 +218,7 @@ func pruneDeletedCandidates(job *model.ScanJob, report *model.CleanupReport) {
 	deleted := make(map[string]struct{})
 	for _, r := range report.Results {
 		if r.Status == model.CleanupStatusDeleted {
-			deleted[r.Path] = struct{}{}
+			deleted[filepath.Clean(r.Path)] = struct{}{}
 		}
 	}
 	if len(deleted) == 0 {

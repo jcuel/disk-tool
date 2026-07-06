@@ -2,12 +2,23 @@ package insights
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/jcuel/disk-tool/internal/model"
+	"github.com/jcuel/disk-tool/internal/safety"
 )
+
+// Options controls age-based and analysis thresholds.
+type Options struct {
+	AgeThresholdDays int
+	MinSizeBytes     int64
+}
+
+const defaultAgeDays = 90
+const defaultMinStale = 50 * 1024 * 1024
 
 var dirRules = []struct {
 	name     string
@@ -36,6 +47,24 @@ var installerExt = map[string]bool{
 }
 
 func Analyze(job *model.ScanJob) *model.InsightsReport {
+	return AnalyzeWithOptions(job, jobInsightsOptions(job))
+}
+
+func jobInsightsOptions(job *model.ScanJob) Options {
+	opts := Options{AgeThresholdDays: defaultAgeDays, MinSizeBytes: defaultMinStale}
+	if job == nil {
+		return opts
+	}
+	if job.InsightsConfig.AgeThresholdDays > 0 {
+		opts.AgeThresholdDays = job.InsightsConfig.AgeThresholdDays
+	}
+	if job.InsightsConfig.MinSizeBytes > 0 {
+		opts.MinSizeBytes = job.InsightsConfig.MinSizeBytes
+	}
+	return opts
+}
+
+func AnalyzeWithOptions(job *model.ScanJob, opts Options) *model.InsightsReport {
 	if job == nil || job.Tree == nil {
 		return &model.InsightsReport{Summary: "No scan data yet."}
 	}
@@ -68,14 +97,13 @@ func Analyze(job *model.ScanJob) *model.InsightsReport {
 		for _, rule := range dirRules {
 			if base == rule.name && n.Size > 0 && !seen[n.Path] {
 				seen[n.Path] = true
-				report.CleanupCandidates = append(report.CleanupCandidates, model.CleanupCandidate{
+				addCandidate(report, model.CleanupCandidate{
 					Category: rule.category,
 					Path:     n.Path,
 					Size:     n.Size,
 					Hint:     rule.hint,
 					Risk:     rule.risk,
 				})
-				report.TotalReclaimable += n.Size
 			}
 		}
 		if isDownloadsDir(n.Path) {
@@ -95,11 +123,118 @@ func Analyze(job *model.ScanJob) *model.InsightsReport {
 		if isDownloadsPath(f.Path) {
 			addDownloadCandidate(report, seen, f)
 		}
+		addStaleCandidate(report, seen, f, opts)
 	}
 
+	tagCandidates(report)
+	report.SafetyGrid = buildSafetyGrid(job.Root, report.CleanupCandidates)
 	report.Summary = buildSummary(job, report)
 	report.TicketText = buildTicketText(job, report)
 	return report
+}
+
+func addCandidate(report *model.InsightsReport, c model.CleanupCandidate) {
+	zone, deletable := safety.ApplyCandidateZone(c.Path, c.Risk)
+	if !deletable {
+		c.Hint = c.Hint + " — protected zone; deletion disabled"
+		report.CleanupCandidates = append(report.CleanupCandidates, tagCandidate(c, zone, deletable))
+		return
+	}
+	report.CleanupCandidates = append(report.CleanupCandidates, tagCandidate(c, zone, deletable))
+	report.TotalReclaimable += c.Size
+}
+
+func tagCandidate(c model.CleanupCandidate, zone safety.Zone, deletable bool) model.CleanupCandidate {
+	c.Zone = string(zone)
+	c.Deletable = deletable
+	return c
+}
+
+func tagCandidates(report *model.InsightsReport) {
+	var reclaim int64
+	for i, c := range report.CleanupCandidates {
+		if c.Zone == "" {
+			z, d := safety.ApplyCandidateZone(c.Path, c.Risk)
+			c.Zone = string(z)
+			c.Deletable = d
+		}
+		if c.Deletable {
+			reclaim += c.Size
+		}
+		report.CleanupCandidates[i] = c
+	}
+	report.TotalReclaimable = reclaim
+}
+
+func buildSafetyGrid(root string, candidates []model.CleanupCandidate) *model.SafetyGrid {
+	grid := &model.SafetyGrid{
+		Zones:     make(map[string]model.SafetyZoneStats),
+		DriveRoot: safety.IsDriveRoot(root),
+	}
+	for _, c := range candidates {
+		key := c.Zone
+		if key == "" {
+			key = string(safety.ZoneNormal)
+		}
+		st := grid.Zones[key]
+		st.Count++
+		st.Bytes += c.Size
+		grid.Zones[key] = st
+		if !c.Deletable {
+			grid.ProtectedBytes += c.Size
+		}
+	}
+	return grid
+}
+
+func addStaleCandidate(report *model.InsightsReport, seen map[string]bool, f model.FileEntry, opts Options) {
+	if seen[f.Path] {
+		return
+	}
+	minSize := opts.MinSizeBytes
+	if minSize <= 0 {
+		minSize = defaultMinStale
+	}
+	if f.Size < minSize {
+		return
+	}
+	ageDays := opts.AgeThresholdDays
+	if ageDays <= 0 {
+		ageDays = defaultAgeDays
+	}
+	info, err := os.Stat(f.Path)
+	if err != nil {
+		return
+	}
+	age := time.Since(info.ModTime())
+	if age < time.Duration(ageDays)*24*time.Hour {
+		return
+	}
+	if !isStaleLocation(f.Path) {
+		return
+	}
+	seen[f.Path] = true
+	hint := fmt.Sprintf("Not modified in %d+ days — review before deleting", ageDays)
+	addCandidate(report, model.CleanupCandidate{
+		Category: model.CategoryStaleLarge,
+		Path:     f.Path,
+		Size:     f.Size,
+		Hint:     hint,
+		Risk:     "review",
+	})
+}
+
+func isStaleLocation(path string) bool {
+	if isDownloadsPath(path) || isTempPath(path) {
+		return true
+	}
+	lower := strings.ToLower(filepath.ToSlash(path))
+	return strings.Contains(lower, "/temp/") || strings.Contains(lower, "/tmp/")
+}
+
+func isTempPath(path string) bool {
+	z := safety.ClassifyPath(path)
+	return z == safety.ZoneMaintenance
 }
 
 func addDownloadCandidate(report *model.InsightsReport, seen map[string]bool, f model.FileEntry) {
@@ -115,14 +250,13 @@ func addDownloadCandidate(report *model.InsightsReport, seen map[string]bool, f 
 	if f.Size >= 100*1024*1024 {
 		hint = "Large installer/archive — likely safe to remove if already installed"
 	}
-	report.CleanupCandidates = append(report.CleanupCandidates, model.CleanupCandidate{
+	addCandidate(report, model.CleanupCandidate{
 		Category: model.CategoryDownload,
 		Path:     f.Path,
 		Size:     f.Size,
 		Hint:     hint,
 		Risk:     "review",
 	})
-	report.TotalReclaimable += f.Size
 }
 
 func isDownloadsDir(path string) bool {
@@ -141,8 +275,12 @@ func buildSummary(job *model.ScanJob, r *model.InsightsReport) string {
 		return fmt.Sprintf("Scanned %s — drill into folders to find where space is used.", job.Root)
 	}
 	top := r.TopConsumers[0]
-	return fmt.Sprintf("%s uses %.1f%% of scanned space (%s). Found %d cleanup candidate(s) worth ~%s if reviewed.",
+	msg := fmt.Sprintf("%s uses %.1f%% of scanned space (%s). Found %d cleanup candidate(s) worth ~%s if reviewed.",
 		top.Name, top.Pct, formatBytes(top.Size), len(r.CleanupCandidates), formatBytes(r.TotalReclaimable))
+	if r.SafetyGrid != nil && r.SafetyGrid.DriveRoot {
+		msg += " Scanning a full drive includes protected OS zones — prefer your user profile for cleanup."
+	}
+	return msg
 }
 
 func buildTicketText(job *model.ScanJob, r *model.InsightsReport) string {
@@ -168,12 +306,12 @@ func buildTicketText(job *model.ScanJob, r *model.InsightsReport) string {
 				b.WriteString(fmt.Sprintf("  ... and %d more\n", len(r.CleanupCandidates)-20))
 				break
 			}
-			b.WriteString(fmt.Sprintf("  [%s] %s — %s\n", c.Category, formatBytes(c.Size), c.Path))
+			b.WriteString(fmt.Sprintf("  [%s/%s] %s — %s\n", c.Category, c.Zone, formatBytes(c.Size), c.Path))
 			b.WriteString(fmt.Sprintf("         %s\n", c.Hint))
 		}
-		b.WriteString(fmt.Sprintf("\nPotential reclaimable (if all reviewed): ~%s\n", formatBytes(r.TotalReclaimable)))
+		b.WriteString(fmt.Sprintf("\nPotential reclaimable (deletable only): ~%s\n", formatBytes(r.TotalReclaimable)))
 	}
-	b.WriteString("\nNote: Sizes are based on scanned portions of the tree. Drill into folders for deeper analysis.\n")
+	b.WriteString("\nNote: Sizes are based on scanned portions of the tree. Protected OS and diagnostic zones cannot be deleted via disk-tool.\n")
 	return b.String()
 }
 

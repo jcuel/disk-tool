@@ -12,6 +12,7 @@ const (
 	CleanupStatusSkippedMissing    = "skipped_missing"
 	CleanupStatusSkippedOutside    = "skipped_outside_root"
 	CleanupStatusSkippedScanRoot   = "skipped_scan_root"
+	CleanupStatusSkippedProtected  = "skipped_protected_zone"
 	CleanupStatusFailed            = "failed"
 	CleanupStatusWouldDelete       = "would_delete"
 )
