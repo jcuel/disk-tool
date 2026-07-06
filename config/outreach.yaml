@@ -1,0 +1,40 @@
+# Outreach channel config — rendered by scripts/outreach/run.py
+# Placeholders: {{version}}, {{demo_url}}, {{landing_url}}, {{release_url}}, {{repo_url}}
+
+urls:
+  demo: https://jcuel.github.io/disk-tool/demo/
+  landing: https://jcuel.github.io/disk-tool/
+  release_base: https://github.com/jcuel/disk-tool/releases/tag/v
+  repo: https://github.com/jcuel/disk-tool
+
+license_footer: |
+  License: PolyForm Noncommercial 1.0.0 — free for personal and noncommercial use. Commercial use requires permission. See https://github.com/jcuel/disk-tool/blob/dev/LICENSE
+
+stagger_seconds: 600
+
+idempotency_marker_prefix: "outreach-posted:"
+
+hackernews:
+  title: "Show HN: disk-tool – local disk analyzer with lazy scan and cleanup insights"
+  url: "{{demo_url}}"
+  text_template: openspec/changes/product-launch/templates/hn-body.md
+
+reddit:
+  - subreddit: DataHoarder
+    kind: link
+    title: "disk-tool — local disk analyzer (overview-first scan, no cloud upload)"
+    url: "{{demo_url}}"
+    body_template: openspec/changes/product-launch/templates/reddit/datahoarder.md
+  - subreddit: sysadmin
+    kind: self
+    title: "disk-tool — local disk usage analyzer with support ticket export"
+    body_template: openspec/changes/product-launch/templates/reddit/sysadmin.md
+  - subreddit: selfhosted
+    kind: link
+    title: "disk-tool — localhost-only disk analyzer with web UI (demo, no telemetry)"
+    url: "{{demo_url}}"
+    body_template: openspec/changes/product-launch/templates/reddit/selfhosted.md
+  - subreddit: golang
+    kind: self
+    title: "Show and tell: disk-tool — Go backend + embedded Vite SPA, lazy filesystem scan"
+    body_template: openspec/changes/product-launch/templates/reddit/golang.md
