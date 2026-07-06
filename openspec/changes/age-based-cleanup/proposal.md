@@ -1,7 +1,7 @@
 # Proposal: Age-based cleanup suggestions
 
 **Change:** age-based-cleanup
-**Status:** draft
+**Status:** in-progress
 **Domain:** disk-tool
 
 ## Summary

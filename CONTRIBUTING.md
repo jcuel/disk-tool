@@ -36,6 +36,28 @@ Ruleset definitions live in [`.github/rulesets/`](.github/rulesets/). They sync 
 bash scripts/apply-branch-rulesets.sh
 ```
 
+## Release to master (version bump)
+
+When a maintainer merges **`dev` → `master`**, the [Release version](https://github.com/jcuel/disk-tool/actions/workflows/release-version.yml) workflow runs automatically:
+
+1. Reads the current version from [`openspec/config.yaml`](openspec/config.yaml) (source of truth).
+2. Bumps **`openspec/config.yaml`**, [`cmd/disk-tool/main.go`](cmd/disk-tool/main.go), and [`web/package.json`](web/package.json) / lockfile.
+3. Commits `[release] bump version to X.Y.Z` on `master` and creates git tag `vX.Y.Z`.
+
+**Default bump:** minor (`0.1.0` → `0.2.0`).
+
+**Explicit version (recommended for milestone releases):** include in the `dev` → `master` PR description:
+
+```text
+Release-Version: 1.1.0
+```
+
+**Repository variables (optional):** set `RELEASE_VERSION` or `RELEASE_BUMP_KIND` (`major` | `minor` | `patch`) under Settings → Secrets and variables → Actions → Variables.
+
+**Push permission:** if branch rules block `github-actions[bot]` from pushing to `master`, add repo secret **`GH_RELEASE_TOKEN`** (fine-grained PAT with **Contents** write on this repo) or grant Actions bypass on the master ruleset.
+
+After the release commit lands on `master`, sync the version back to `dev` (merge `master` → `dev` or cherry-pick the bump commit) so both branches stay aligned.
+
 ## Getting started
 
 1. Fork [jcuel/disk-tool](https://github.com/jcuel/disk-tool) on GitHub.

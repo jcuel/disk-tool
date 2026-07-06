@@ -97,3 +97,39 @@ The project SHALL provide Cypress browser tests that run headless against a loca
 ### Requirement: Localhost binding
 
 The server SHALL bind to 127.0.0.1 only and reject paths outside the scan root.
+
+### Requirement: Cleanup insights
+
+The system SHALL detect pattern-based cleanup candidates (dev artifacts, caches, downloads) with risk tiers and export them in insights, HTML, JSON, and support ticket formats.
+
+### Requirement: Safe delete
+
+The system SHALL expose `POST /api/scans/{id}/delete` requiring `confirm: true` and `confirmPhrase: "DELETE"`. Paths outside the scan root, the scan root itself, and protected safety zones SHALL be rejected.
+
+### Requirement: Open in file manager
+
+The system SHALL expose `POST /api/scans/{id}/open` to launch the OS file manager for paths under the scan root.
+
+### Requirement: Guided bulk cleanup
+
+The system SHALL expose `POST /api/scans/{id}/cleanup` with dry-run and execute modes. Execute SHALL require typed confirmation and skip locked, missing, outside-root, and protected-zone paths.
+
+### Requirement: OS safety zones
+
+The system SHALL classify paths into safety zones (forbidden, critical_os, diagnostic, caution, review, maintenance). Forbidden paths SHALL be skipped during scan. Delete and bulk cleanup SHALL block critical_os, diagnostic, and forbidden zones.
+
+### Requirement: Safety grid
+
+The insights report SHALL include a safety grid summarizing candidate counts and bytes per zone. The web UI SHALL display the grid with zone and risk badges on cleanup candidates.
+
+### Requirement: Maintenance presets
+
+The system SHALL expose `GET /api/scans/{id}/maintenance-presets` returning preset definitions and matched deletable paths for one-click maintenance flows.
+
+### Requirement: Age-based cleanup
+
+The system SHALL flag stale large files under Downloads and temp locations via configurable age and size thresholds. The UI SHALL allow threshold adjustment and re-analyze via `POST /api/scans/{id}/reanalyze`.
+
+### Requirement: Duplicate detection
+
+The system SHALL expose `POST /api/scans/{id}/duplicates` to find duplicate file groups under the scan root, excluding protected zones.

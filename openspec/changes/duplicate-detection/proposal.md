@@ -1,7 +1,7 @@
 # Proposal: Duplicate file detection
 
 **Change:** duplicate-detection
-**Status:** draft
+**Status:** in-progress
 **Domain:** disk-tool
 
 ## Summary

@@ -15,6 +15,19 @@ Guide users to **where disk space is consumed**, surface **actionable cleanup ca
 
 Insights improve as you drill — scan `Users` or `Projects` to uncover nested `node_modules` and caches.
 
+## Safe cleanup guide
+
+| Zone | Meaning | Delete via disk-tool? |
+|------|---------|----------------------|
+| **review** | Regenerable dev artifacts (`node_modules`, `target/`) | Yes, after review |
+| **maintenance** | User temp folders | Yes, with age filter |
+| **caution** | Shared caches (`.npm`, `.gradle`) | Review carefully |
+| **diagnostic** | Crash dumps, minidumps | No — view only |
+| **critical_os** | Windows, `/usr`, Program Files | No |
+| **forbidden** | System32, `/proc` | Hidden from scan |
+
+Use **Maintenance presets** (Dev reclaim, Temp cleanup) for quick safe wins. Scan your user profile rather than `C:\` or `/` when cleaning up.
+
 ## How scanning works
 
 1. **Overview** — lists top-level folders with accurate total sizes (% of root). Each top-level folder is sized in parallel (no full-tree walk).

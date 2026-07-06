@@ -21,6 +21,34 @@ export interface CleanupCandidate {
   size: number;
   hint: string;
   risk: string;
+  zone?: string;
+  deletable?: boolean;
+}
+
+export interface SafetyZoneStats {
+  count: number;
+  bytes: number;
+}
+
+export interface SafetyGrid {
+  zones: Record<string, SafetyZoneStats>;
+  driveRoot: boolean;
+  protectedBytes: number;
+}
+
+export interface DuplicateGroup {
+  hash: string;
+  files: FileEntry[];
+  wasted: number;
+}
+
+export interface MaintenancePresetMatch {
+  id: string;
+  name: string;
+  description: string;
+  matchCount: number;
+  matchBytes: number;
+  paths: string[];
 }
 
 export interface TopConsumer {
@@ -36,6 +64,7 @@ export interface InsightsReport {
   cleanupCandidates: CleanupCandidate[];
   totalReclaimable: number;
   ticketText: string;
+  safetyGrid?: SafetyGrid;
 }
 
 export interface ScanJob {
@@ -46,6 +75,8 @@ export interface ScanJob {
   largestFiles?: FileEntry[];
   insights?: InsightsReport;
   lastCleanupReport?: CleanupReport;
+  duplicateGroups?: DuplicateGroup[];
+  insightsConfig?: { ageThresholdDays: number; minSizeBytes: number };
   dirsScanned: number;
   filesScanned: number;
   bytesScanned: number;
@@ -162,11 +193,11 @@ export async function getScan(id: string): Promise<ScanJob> {
   return r.json();
 }
 
-export async function deletePath(id: string, path: string): Promise<void> {
+export async function deletePath(id: string, path: string, confirmPhrase = "DELETE"): Promise<void> {
   const r = await fetch(`/api/scans/${id}/delete`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path, confirm: true }),
+    body: JSON.stringify({ path, confirm: true, confirmPhrase }),
   });
   if (!r.ok) {
     const e = await r.json();
@@ -201,6 +232,41 @@ export async function runCleanup(id: string, req: CleanupRequest): Promise<Clean
 
 export async function cancelScan(id: string): Promise<void> {
   await fetch(`/api/scans/${id}`, { method: "DELETE" });
+}
+
+export async function fetchMaintenancePresets(id: string): Promise<{
+  presets: { id: string; name: string; description: string; autoSelect: boolean }[];
+  matches: MaintenancePresetMatch[];
+}> {
+  const r = await fetch(`/api/scans/${id}/maintenance-presets`);
+  if (!r.ok) throw new Error("presets failed");
+  return r.json();
+}
+
+export async function reanalyzeInsights(
+  id: string,
+  cfg: { ageThresholdDays: number; minSizeBytes: number }
+): Promise<InsightsReport> {
+  const r = await fetch(`/api/scans/${id}/reanalyze`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(cfg),
+  });
+  if (!r.ok) {
+    const e = await r.json();
+    throw new Error(e.error || "reanalyze failed");
+  }
+  return r.json();
+}
+
+export async function findDuplicates(id: string): Promise<DuplicateGroup[]> {
+  const r = await fetch(`/api/scans/${id}/duplicates`, { method: "POST" });
+  if (!r.ok) {
+    const e = await r.json();
+    throw new Error(e.error || "duplicate scan failed");
+  }
+  const j = await r.json();
+  return j.duplicateGroups as DuplicateGroup[];
 }
 
 export function connectEvents(

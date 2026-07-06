@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/jcuel/disk-tool/internal/diskspace"
 	"github.com/jcuel/disk-tool/internal/model"
+	"github.com/jcuel/disk-tool/internal/safety"
 	"github.com/jcuel/disk-tool/internal/scanner"
 )
 
@@ -44,6 +45,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/scans/{id}/open", s.handleOpenPath)
 	mux.HandleFunc("POST /api/scans/{id}/delete", s.handleDeletePath)
 	mux.HandleFunc("POST /api/scans/{id}/cleanup", s.handleCleanup)
+	s.registerSafetyRoutes(mux)
 	if s.static != nil {
 		mux.Handle("/", s.static)
 	}
@@ -76,7 +78,7 @@ func (s *Server) handleStartScan(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
-	job, err := s.store.Start(req.Root)
+	job, err := s.store.Start(req.Root, insightsConfigFromRequest(req))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -217,8 +219,9 @@ func (s *Server) handleDeletePath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Path    string `json:"path"`
-		Confirm bool   `json:"confirm"`
+		Path          string `json:"path"`
+		Confirm       bool   `json:"confirm"`
+		ConfirmPhrase string `json:"confirmPhrase"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
@@ -226,6 +229,10 @@ func (s *Server) handleDeletePath(w http.ResponseWriter, r *http.Request) {
 	}
 	if !req.Confirm {
 		writeError(w, http.StatusBadRequest, errConfirmRequired.Error())
+		return
+	}
+	if req.ConfirmPhrase != cleanupConfirmPhrase {
+		writeError(w, http.StatusBadRequest, errCleanupConfirmPhrase.Error())
 		return
 	}
 	req.Path = SanitizePath(req.Path)
@@ -242,11 +249,23 @@ func (s *Server) handleDeletePath(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "cannot delete scan root")
 		return
 	}
+	zone := safety.ClassifyPath(abs)
+	if !safety.IsDeletable(zone) {
+		writeError(w, http.StatusBadRequest, "protected zone: "+string(zone))
+		return
+	}
 	if err := DeletePath(abs); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted", "path": abs})
+}
+
+func insightsConfigFromRequest(req model.StartScanRequest) model.InsightsConfig {
+	if req.InsightsConfig != nil {
+		return *req.InsightsConfig
+	}
+	return model.InsightsConfig{}
 }
 
 func (s *Server) handleCleanup(w http.ResponseWriter, r *http.Request) {

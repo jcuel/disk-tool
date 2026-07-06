@@ -1,7 +1,7 @@
 # Proposal: Guided bulk cleanup
 
 **Change:** guided-bulk-cleanup
-**Status:** in-progress
+**Status:** archived
 
 ## Summary
 

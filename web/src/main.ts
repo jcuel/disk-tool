@@ -4,15 +4,19 @@ import {
   deletePath,
   expandScan,
   fetchDisk,
+  fetchMaintenancePresets,
   fetchRoots,
+  findDuplicates,
   findNode,
   formatBytes,
   getScan,
   needsExpand,
   openPath,
+  reanalyzeInsights,
   runCleanup,
   startScan,
   type CleanupReport,
+  type MaintenancePresetMatch,
   type ScanJob,
   type ScanNode,
 } from "./api";
@@ -76,6 +80,16 @@ app.innerHTML = `
     <p id="insights-summary" class="hint">Run an overview scan to see where space is used.</p>
     <h3>Cleanup candidates</h3>
     <p class="hint">Leftover project deps, caches, and downloads — review before deleting</p>
+    <div id="drive-root-banner" class="warning-banner hidden"></div>
+    <div id="safety-grid" class="safety-grid hidden"></div>
+    <div id="maintenance-presets" class="maintenance-presets hidden"></div>
+    <div id="age-controls" class="age-controls hidden">
+      <label>Stale age (days) <input type="number" id="age-days" min="1" value="90" /></label>
+      <label>Min size (MB) <input type="number" id="min-size-mb" min="1" value="50" /></label>
+      <button type="button" id="reanalyze-btn" class="secondary-btn">Refresh insights</button>
+      <button type="button" id="duplicates-btn" class="secondary-btn">Find duplicates</button>
+    </div>
+    <div id="duplicates-panel" class="duplicates-panel hidden"></div>
     <div id="cleanup-toolbar" class="cleanup-toolbar hidden">
       <button type="button" id="select-review-btn" class="secondary-btn">Select safe (review)</button>
       <button type="button" id="select-all-btn" class="secondary-btn">Select all</button>
@@ -84,7 +98,7 @@ app.innerHTML = `
     </div>
     <div id="cleanup-report-panel" class="cleanup-report hidden"></div>
     <table id="cleanup-table">
-      <thead><tr><th></th><th>Type</th><th>Path</th><th>Size</th><th>Hint</th><th></th></tr></thead>
+      <thead><tr><th></th><th>Type</th><th>Zone</th><th>Risk</th><th>Path</th><th>Size</th><th>Hint</th><th></th></tr></thead>
       <tbody></tbody>
     </table>
   </section>
@@ -138,6 +152,15 @@ const modalTitle = document.getElementById("modal-title")!;
 const modalBody = document.getElementById("modal-body")!;
 const modalActions = document.getElementById("modal-actions")!;
 const chartsHint = document.getElementById("charts-hint")!;
+const driveRootBanner = document.getElementById("drive-root-banner")!;
+const safetyGridEl = document.getElementById("safety-grid")!;
+const maintenancePresetsEl = document.getElementById("maintenance-presets")!;
+const ageControls = document.getElementById("age-controls")!;
+const ageDaysInput = document.getElementById("age-days") as HTMLInputElement;
+const minSizeMbInput = document.getElementById("min-size-mb") as HTMLInputElement;
+const reanalyzeBtn = document.getElementById("reanalyze-btn") as HTMLButtonElement;
+const duplicatesBtn = document.getElementById("duplicates-btn") as HTMLButtonElement;
+const duplicatesPanel = document.getElementById("duplicates-panel")!;
 
 let modalBusy = false;
 
@@ -240,18 +263,23 @@ async function refreshJob() {
   renderUI();
 }
 
-function makeDeleteBtn(path: string, label: string): HTMLButtonElement {
+function makeDeleteBtn(path: string, label: string, deletable = true): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.textContent = "Delete";
   btn.className = "link-btn danger";
   btn.type = "button";
+  if (!deletable) {
+    btn.disabled = true;
+    btn.title = "Protected zone — deletion disabled";
+    return btn;
+  }
   btn.onclick = async (e) => {
     e.stopPropagation();
     if (!scanId) return;
-    const msg = `Delete permanently?\n\n${path}\n\n${label}`;
-    if (!confirm(msg)) return;
+    const phrase = prompt(`Type DELETE to permanently remove:\n\n${path}`);
+    if (phrase !== "DELETE") return;
     try {
-      await deletePath(scanId, path);
+      await deletePath(scanId, path, "DELETE");
       await refreshJob();
     } catch (err) {
       alert(String(err));
@@ -390,15 +418,39 @@ function renderInsights() {
     cleanupBody.innerHTML = "";
     cleanupToolbar.classList.add("hidden");
     cleanupReportPanel.classList.add("hidden");
+    safetyGridEl.classList.add("hidden");
+    maintenancePresetsEl.classList.add("hidden");
+    ageControls.classList.add("hidden");
+    driveRootBanner.classList.add("hidden");
     return;
   }
   insightsSummary.textContent = ins.summary;
+  ageControls.classList.remove("hidden");
+  if (job?.insightsConfig?.ageThresholdDays) {
+    ageDaysInput.value = String(job.insightsConfig.ageThresholdDays);
+  }
+  if (job?.insightsConfig?.minSizeBytes) {
+    minSizeMbInput.value = String(Math.round(job.insightsConfig.minSizeBytes / (1024 * 1024)));
+  }
+
+  if (ins.safetyGrid?.driveRoot) {
+    driveRootBanner.classList.remove("hidden");
+    driveRootBanner.textContent =
+      "Scanning a full drive includes protected OS areas. Prefer your user profile (/home or Users) for cleanup. Protected zones cannot be deleted.";
+  } else {
+    driveRootBanner.classList.add("hidden");
+  }
+
+  renderSafetyGrid(ins);
+  void renderMaintenancePresets();
+  renderDuplicatesPanel();
+
   cleanupBody.innerHTML = "";
   const candidates = ins.cleanupCandidates || [];
   cleanupToolbar.classList.toggle("hidden", candidates.length === 0);
   if (candidates.length === 0) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="6" class="muted">No known cleanup patterns yet — drill into Users, Projects, or Downloads</td>`;
+    tr.innerHTML = `<td colspan="8" class="muted">No known cleanup patterns yet — drill into Users, Projects, or Downloads</td>`;
     cleanupBody.appendChild(tr);
     return;
   }
@@ -409,6 +461,7 @@ function renderInsights() {
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.checked = selectedCleanup.has(c.path);
+    cb.disabled = c.deletable === false;
     cb.onclick = (e) => e.stopPropagation();
     cb.onchange = () => {
       if (cb.checked) selectedCleanup.add(c.path);
@@ -419,6 +472,12 @@ function renderInsights() {
     const typeTd = document.createElement("td");
     typeTd.innerHTML = `<span class="badge-cat">${escapeHtml(c.category)}</span>`;
     tr.appendChild(typeTd);
+    const zoneTd = document.createElement("td");
+    zoneTd.innerHTML = `<span class="badge-zone zone-${escapeHtml(c.zone || "normal")}">${escapeHtml(c.zone || "normal")}</span>`;
+    tr.appendChild(zoneTd);
+    const riskTd = document.createElement("td");
+    riskTd.innerHTML = `<span class="badge-risk risk-${escapeHtml(c.risk)}">${escapeHtml(c.risk)}</span>`;
+    tr.appendChild(riskTd);
     const pathTd = document.createElement("td");
     pathTd.textContent = c.path;
     tr.appendChild(pathTd);
@@ -431,13 +490,125 @@ function renderInsights() {
     const openTd = document.createElement("td");
     openTd.appendChild(makeOpenBtn(c.path));
     openTd.appendChild(document.createTextNode(" "));
-    openTd.appendChild(makeDeleteBtn(c.path, `${c.category}: ${formatBytes(c.size)}`));
+    openTd.appendChild(makeDeleteBtn(c.path, `${c.category}: ${formatBytes(c.size)}`, c.deletable !== false));
     tr.appendChild(openTd);
     tr.onclick = () => selectPath(c.path, true);
     cleanupBody.appendChild(tr);
   }
   renderCleanupReport();
 }
+
+function renderSafetyGrid(ins: NonNullable<ScanJob["insights"]>) {
+  const grid = ins.safetyGrid;
+  if (!grid || Object.keys(grid.zones).length === 0) {
+    safetyGridEl.classList.add("hidden");
+    return;
+  }
+  safetyGridEl.classList.remove("hidden");
+  const cells = Object.entries(grid.zones)
+    .map(
+      ([zone, st]) =>
+        `<button type="button" class="safety-cell zone-${escapeHtml(zone)}" data-zone="${escapeHtml(zone)}">
+          <strong>${escapeHtml(zone)}</strong>
+          <span>${st.count} item(s) · ${formatBytes(st.bytes)}</span>
+        </button>`
+    )
+    .join("");
+  safetyGridEl.innerHTML = `<h3>Safety grid</h3><p class="hint">Click a zone to filter cleanup candidates</p><div class="safety-cells">${cells}</div>`;
+  safetyGridEl.querySelectorAll(".safety-cell").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const zone = (btn as HTMLElement).dataset.zone;
+      selectedCleanup.clear();
+      for (const c of ins.cleanupCandidates || []) {
+        if (c.zone === zone && c.deletable !== false) selectedCleanup.add(c.path);
+      }
+      renderInsights();
+    });
+  });
+}
+
+async function renderMaintenancePresets() {
+  if (!scanId || !job?.insights) {
+    maintenancePresetsEl.classList.add("hidden");
+    return;
+  }
+  try {
+    const data = await fetchMaintenancePresets(scanId);
+    maintenancePresetsEl.classList.remove("hidden");
+    maintenancePresetsEl.innerHTML = `<h3>Maintenance presets</h3><div class="preset-buttons"></div>`;
+    const wrap = maintenancePresetsEl.querySelector(".preset-buttons")!;
+    for (const m of data.matches) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "secondary-btn preset-btn";
+      btn.title = m.description;
+      btn.textContent = `${m.name} (${m.matchCount})`;
+      btn.disabled = m.matchCount === 0;
+      btn.onclick = () => applyPreset(m);
+      wrap.appendChild(btn);
+    }
+  } catch {
+    maintenancePresetsEl.classList.add("hidden");
+  }
+}
+
+function applyPreset(match: MaintenancePresetMatch) {
+  selectedCleanup.clear();
+  for (const p of match.paths) selectedCleanup.add(p);
+  renderInsights();
+  if (match.id === "cache-review") {
+    openReviewModal((job?.insights?.cleanupCandidates || []).filter((c) => match.paths.includes(c.path)));
+  } else if (match.matchCount > 0) {
+    void startReviewCleanup();
+  }
+}
+
+function renderDuplicatesPanel() {
+  const groups = job?.duplicateGroups || [];
+  if (groups.length === 0) {
+    duplicatesPanel.classList.add("hidden");
+    return;
+  }
+  duplicatesPanel.classList.remove("hidden");
+  const rows = groups
+    .slice(0, 10)
+    .map(
+      (g) =>
+        `<tr><td>${escapeHtml(g.hash)}</td><td>${g.files.length}</td><td>${formatBytes(g.wasted)}</td><td>${escapeHtml(g.files.map((f) => f.path).join("; "))}</td></tr>`
+    )
+    .join("");
+  duplicatesPanel.innerHTML = `<h3>Duplicate files</h3><table class="modal-table"><thead><tr><th>Hash</th><th>Copies</th><th>Wasted</th><th>Paths</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+reanalyzeBtn.onclick = async () => {
+  if (!scanId) return;
+  const cfg = {
+    ageThresholdDays: parseInt(ageDaysInput.value, 10) || 90,
+    minSizeBytes: (parseInt(minSizeMbInput.value, 10) || 50) * 1024 * 1024,
+  };
+  try {
+    reanalyzeBtn.disabled = true;
+    await reanalyzeInsights(scanId, cfg);
+    await refreshJob();
+  } catch (e) {
+    alert(String(e));
+  } finally {
+    reanalyzeBtn.disabled = false;
+  }
+};
+
+duplicatesBtn.onclick = async () => {
+  if (!scanId) return;
+  try {
+    duplicatesBtn.disabled = true;
+    await findDuplicates(scanId);
+    await refreshJob();
+  } catch (e) {
+    alert(String(e));
+  } finally {
+    duplicatesBtn.disabled = false;
+  }
+};
 
 function renderCleanupReport() {
   const report = job?.lastCleanupReport;
@@ -528,12 +699,12 @@ async function startReviewCleanup() {
 
 function openReviewModal(items: ReturnType<typeof selectedCandidates>) {
   const rows = items.map((c) =>
-    `<tr><td>${escapeHtml(c.category)}</td><td>${escapeHtml(c.path)}</td><td>${formatBytes(c.size)}</td><td>${escapeHtml(c.risk)}</td></tr>`
+    `<tr><td>${escapeHtml(c.category)}</td><td>${escapeHtml(c.zone || "normal")}</td><td>${escapeHtml(c.path)}</td><td>${formatBytes(c.size)}</td><td>${escapeHtml(c.risk)}</td></tr>`
   ).join("");
   const body = `
     <p>${items.length} item(s), total ${formatBytes(totalSelectedBytes())}</p>
     <div class="modal-table-wrap">
-    <table class="modal-table"><thead><tr><th>Type</th><th>Path</th><th>Size</th><th>Risk</th></tr></thead><tbody>${rows}</tbody></table>
+    <table class="modal-table"><thead><tr><th>Type</th><th>Zone</th><th>Path</th><th>Size</th><th>Risk</th></tr></thead><tbody>${rows}</tbody></table>
     </div>`;
   openModal("Review cleanup", body, [
     { label: "Cancel", onClick: closeModal },
@@ -618,7 +789,7 @@ function showConfirmModal(items: { path: string; size: number; category: string 
 selectReviewBtn.onclick = () => {
   selectedCleanup.clear();
   for (const c of job?.insights?.cleanupCandidates || []) {
-    if (c.risk === "review") selectedCleanup.add(c.path);
+    if (c.risk === "review" && c.deletable !== false) selectedCleanup.add(c.path);
   }
   renderInsights();
 };
@@ -626,7 +797,7 @@ selectReviewBtn.onclick = () => {
 selectAllBtn.onclick = () => {
   selectedCleanup.clear();
   for (const c of job?.insights?.cleanupCandidates || []) {
-    selectedCleanup.add(c.path);
+    if (c.deletable !== false) selectedCleanup.add(c.path);
   }
   renderInsights();
 };

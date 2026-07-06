@@ -1,7 +1,7 @@
 # Proposal: Safe delete cleanup candidates
 
 **Change:** cleanup-insights-safe-delete
-**Status:** in-progress
+**Status:** archived
 
 ## Summary
 

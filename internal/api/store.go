@@ -10,6 +10,7 @@ import (
 	"github.com/jcuel/disk-tool/internal/insights"
 	"github.com/jcuel/disk-tool/internal/model"
 	"github.com/jcuel/disk-tool/internal/scanner"
+	"github.com/jcuel/disk-tool/internal/dedup"
 )
 
 type subscriber chan model.ProgressEvent
@@ -42,7 +43,7 @@ func (s *Store) expandLock(id string) *sync.Mutex {
 	return s.expandMu[id]
 }
 
-func (s *Store) Start(root string) (*model.ScanJob, error) {
+func (s *Store) Start(root string, cfg model.InsightsConfig) (*model.ScanJob, error) {
 	validRoot, err := ValidateRoot(root)
 	if err != nil {
 		return nil, err
@@ -50,10 +51,11 @@ func (s *Store) Start(root string) (*model.ScanJob, error) {
 
 	id := newScanID()
 	job := &model.ScanJob{
-		ID:        id,
-		Root:      validRoot,
-		Status:    model.ScanStatusRunning,
-		StartedAt: time.Now(),
+		ID:             id,
+		Root:           validRoot,
+		Status:         model.ScanStatusRunning,
+		StartedAt:      time.Now(),
+		InsightsConfig: cfg,
 	}
 
 	s.mu.Lock()
@@ -268,4 +270,37 @@ func (s *Store) broadcastLocked(id string, ev model.ProgressEvent) {
 		default:
 		}
 	}
+}
+
+func (s *Store) Reanalyze(id string, cfg model.InsightsConfig) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	job, ok := s.jobs[id]
+	if !ok {
+		return errNotFound
+	}
+	if job.Status != model.ScanStatusCompleted {
+		return errNotReady
+	}
+	job.InsightsConfig = cfg
+	job.Insights = insights.Analyze(job)
+	return nil
+}
+
+func (s *Store) FindDuplicates(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	job, ok := s.jobs[id]
+	if !ok {
+		return errNotFound
+	}
+	if job.Status != model.ScanStatusCompleted {
+		return errNotReady
+	}
+	files := job.LargestFiles
+	if len(files) == 0 && job.Tree != nil {
+		files = dedup.WalkTreeFiles(job.Tree)
+	}
+	job.DuplicateGroups = dedup.FindDuplicates(files, 4096)
+	return nil
 }
