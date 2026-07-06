@@ -1,7 +1,7 @@
 # Proposal: Open folder in explorer
 
 **Change:** cleanup-insights-explorer
-**Status:** in-progress
+**Status:** archived
 
 ## Summary
 

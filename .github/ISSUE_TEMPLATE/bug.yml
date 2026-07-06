@@ -1,31 +1,73 @@
 name: Bug report
-description: Report a defect
+description: Report a defect in disk-tool
 title: "[bug] "
 labels: ["bug"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        PRs for fixes should target **`dev`** (branch from `upstream/dev`). See [CONTRIBUTING.md](https://github.com/jcuel/disk-tool/blob/dev/CONTRIBUTING.md).
+        Do **not** use this form for security vulnerabilities — use [Security Advisories](https://github.com/jcuel/disk-tool/security/advisories/new) instead.
+
   - type: textarea
     id: summary
     attributes:
       label: Summary
+      description: What went wrong?
     validations:
       required: true
+
   - type: textarea
     id: repro
     attributes:
       label: Steps to reproduce
       placeholder: |
-        1. 
-        2. 
+        1. Start `disk-tool serve` with …
+        2. Click …
+        3. See error
     validations:
       required: true
+
   - type: textarea
     id: expected
     attributes:
       label: Expected behavior
     validations:
       required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows
+        - Linux
+        - macOS
+        - Docker
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: disk-tool version or commit
+      placeholder: e.g. master @ abc1234 or v0.1.0
+    validations:
+      required: true
+
   - type: input
     id: branch
     attributes:
       label: Suggested fix branch
+      description: Cut from `dev`
       placeholder: fix/short-topic
+    validations:
+      required: true

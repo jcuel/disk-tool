@@ -1,0 +1,32 @@
+name: Sync branch rulesets
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - .github/rulesets/**
+      - .github/workflows/branch-policy.yml
+      - .github/workflows/sync-branch-rulesets.yml
+      - scripts/apply-branch-rulesets.sh
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Sync branch rulesets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply rulesets
+        env:
+          GH_TOKEN: ${{ secrets.GH_RULESET_SYNC }}
+        run: |
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "::error::GH_RULESET_SYNC secret is not set."
+            echo "Create a fine-grained PAT with Administration read/write on this repo."
+            echo "See CONTRIBUTING.md — Enforced branch rules."
+            exit 1
+          fi
+          bash scripts/apply-branch-rulesets.sh

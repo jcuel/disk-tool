@@ -1,16 +1,30 @@
 name: OpenSpec change
-description: Track a SPECBOOT change linked to openspec/changes/
+description: Track a SPECBOOT feature or enhancement
 title: "[change-name] "
 labels: ["change"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        For non-trivial work, create or link `openspec/changes/<change-name>/` (user story → proposal → apply).
+        PRs target **`dev`**. Branch from `upstream/dev` as `feat/<change-name>` or `fix/<topic>`.
+
   - type: input
     id: change-name
     attributes:
       label: Change name
-      description: Folder under openspec/changes/
+      description: Folder under `openspec/changes/`
       placeholder: cleanup-insights
     validations:
       required: true
+
+  - type: input
+    id: openspec-link
+    attributes:
+      label: OpenSpec path (if exists)
+      placeholder: openspec/changes/cleanup-insights/
+      description: Leave blank if `/enrich-us` still needed
+
   - type: textarea
     id: summary
     attributes:
@@ -18,19 +32,33 @@ body:
       description: What problem does this solve?
     validations:
       required: true
+
   - type: textarea
     id: acceptance
     attributes:
       label: Acceptance criteria
-      description: Copy from user-story.md or define here
+      description: Copy from `user-story.md` or define here
       value: |
-        - [ ] 
+        - [ ]
     validations:
       required: true
+
   - type: input
     id: branch
     attributes:
       label: Target branch
+      description: Feature branch cut from `dev`
       placeholder: feat/change-name
     validations:
       required: true
+
+  - type: dropdown
+    id: milestone
+    attributes:
+      label: Milestone (suggested)
+      options:
+        - v1.1 — Safety & maintenance
+        - v1.0 — Cleanup insights v2
+        - v0.2 — Fixes & tooling
+        - Future
+        - Unsure

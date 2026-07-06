@@ -23,7 +23,8 @@ Move status on the project board when stage changes. Keep issue **comments** upd
 | **v0.1 — Foundation** | Shipped (scanner, API, UI, insights v1, CI) |
 | **v0.2 — Fixes & tooling** | #3 CLI JSON bug, #6 govulncheck, #7 template restore |
 | **v1.0 — Cleanup insights v2** | #1 open in explorer, #2 safe delete |
-| **Future** | #4 duplicates, #5 age-based cleanup (needs `/propose`) |
+| **v1.1 — Safety & maintenance** | OS zones, safety grid, maintenance presets, age-based, duplicates |
+| **Future** | macOS zones, Docker cleanup |
 
 Set milestone when creating an issue. Filter the **By milestone** view to plan releases.
 
@@ -46,6 +47,8 @@ Project **Status** can drift when issues close via merged PRs.
 ### Automatic (CI)
 
 After a successful **CI** run on a push to `master`, [`.github/workflows/sync-project-board.yml`](../workflows/sync-project-board.yml) runs `scripts/sync-project-board.sh`.
+
+After a push to **`master`** (release merge), [`.github/workflows/release-version.yml`](../workflows/release-version.yml) bumps semver in `openspec/config.yaml`, the CLI, and web package, then tags `vX.Y.Z`. See [CONTRIBUTING.md](../CONTRIBUTING.md#release-to-master-version-bump).
 
 Requires repository secret **`GH_PROJECT_SYNC`**: a **classic** PAT (`ghp_…`) with **`project`** and **`repo`** scopes. Fine-grained PATs cannot write user-owned project boards ([GitHub docs](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token)). The default `GITHUB_TOKEN` cannot write user-owned project boards either.
 
