@@ -3,6 +3,11 @@ name: Release version
 on:
   push:
     branches: [master]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Optional explicit semver (overrides vars.RELEASE_VERSION)
+        required: false
 
 permissions:
   contents: write
@@ -11,7 +16,7 @@ jobs:
   bump-and-tag:
     name: Bump version and tag release
     runs-on: ubuntu-latest
-    if: ${{ !contains(github.event.head_commit.message, '[release] bump version') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[release] bump version') }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -20,11 +25,19 @@ jobs:
       - name: Resolve release version and bump files
         id: bump
         env:
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-          RELEASE_VERSION: ${{ vars.RELEASE_VERSION }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message || '' }}
+          RELEASE_VERSION: ${{ inputs.version || vars.RELEASE_VERSION }}
           BUMP_KIND: ${{ vars.RELEASE_BUMP_KIND }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          msg="$COMMIT_MESSAGE"
+          if [[ -n "$msg" ]] && [[ "$msg" =~ Merge[[:space:]]pull[[:space:]]request[[:space:]]#([0-9]+) ]]; then
+            pr_num="${BASH_REMATCH[1]}"
+            pr_body="$(gh pr view "$pr_num" --repo "$GITHUB_REPOSITORY" --json body --jq .body 2>/dev/null || true)"
+            msg="${msg}"$'\n'"${pr_body}"
+          fi
+          export COMMIT_MESSAGE="$msg"
           out="$(bash scripts/release-version.sh)"
           echo "$out"
           target="$(echo "$out" | awk -F= '/^target_version=/{print $2}')"
