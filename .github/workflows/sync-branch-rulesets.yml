@@ -10,7 +10,7 @@ on:
       - scripts/apply-branch-rulesets.sh
 
 permissions:
-  administration: write
+  contents: read
 
 jobs:
   sync:
@@ -21,5 +21,12 @@ jobs:
 
       - name: Apply rulesets
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: bash scripts/apply-branch-rulesets.sh
+          GH_TOKEN: ${{ secrets.GH_RULESET_SYNC }}
+        run: |
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "::error::GH_RULESET_SYNC secret is not set."
+            echo "Create a fine-grained PAT with Administration read/write on this repo."
+            echo "See CONTRIBUTING.md — Enforced branch rules."
+            exit 1
+          fi
+          bash scripts/apply-branch-rulesets.sh
