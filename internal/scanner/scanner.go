@@ -5,11 +5,11 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/jcuel/disk-tool/internal/model"
 	"github.com/jcuel/disk-tool/internal/safety"
+	"github.com/jcuel/disk-tool/internal/safepath"
 )
 
 const maxLargestFiles = 100
@@ -24,6 +24,38 @@ type Scanner struct{}
 
 func New() *Scanner {
 	return &Scanner{}
+}
+
+type scanCtx struct {
+	root    *os.Root
+	rootAbs string
+}
+
+func openScanCtx(userRoot string) (*scanCtx, error) {
+	root, abs, err := safepath.OpenRoot(userRoot)
+	if err != nil {
+		return nil, err
+	}
+	return &scanCtx{root: root, rootAbs: abs}, nil
+}
+
+func (scx *scanCtx) close() {
+	if scx.root != nil {
+		_ = scx.root.Close()
+	}
+}
+
+func (scx *scanCtx) readDir(absDir string) ([]os.DirEntry, error) {
+	rel, err := safepath.Rel(scx.rootAbs, absDir)
+	if err != nil {
+		return nil, err
+	}
+	f, err := scx.root.Open(rel)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return f.ReadDir(-1)
 }
 
 type fileHeap []model.FileEntry
@@ -89,17 +121,20 @@ func (st *walkState) largestFiles() []model.FileEntry {
 
 // ScanOverview lists immediate children with accurate aggregate sizes (parallel per top-level folder).
 func (sc *Scanner) ScanOverview(ctx context.Context, opts Options) (*model.ScanNode, []model.FileEntry, error) {
-	root, err := prepareRoot(opts.Root)
+	scx, err := openScanCtx(opts.Root)
 	if err != nil {
 		return nil, nil, err
 	}
+	defer scx.close()
+
+	root := scx.rootAbs
 	st := newWalkState()
 	st.dirs++
 	st.cur = root
 	st.emit(opts)
 
 	node := newNode(root)
-	entries, err := os.ReadDir(root)
+	entries, err := scx.readDir(root)
 	if err != nil {
 		return node, st.largestFiles(), nil
 	}
@@ -119,7 +154,7 @@ func (sc *Scanner) ScanOverview(ctx context.Context, opts Options) (*model.ScanN
 		name := entry.Name()
 		full := filepath.Join(root, name)
 
-		if entry.Type()&os.ModeSymlink != 0 && skipSymlink(full, st.visited) {
+		if entry.Type()&os.ModeSymlink != 0 && skipSymlinkAt(scx, full, st.visited) {
 			continue
 		}
 
@@ -131,7 +166,7 @@ func (sc *Scanner) ScanOverview(ctx context.Context, opts Options) (*model.ScanN
 			wg.Add(1)
 			go func(dirPath, dirName string) {
 				defer wg.Done()
-				size, files, err := sc.aggregateDir(ctx, dirPath, st, opts)
+				size, files, err := sc.aggregateDir(ctx, scx, dirPath, st, opts)
 				if err != nil {
 					return
 				}
@@ -178,18 +213,21 @@ func (sc *Scanner) ScanOverview(ctx context.Context, opts Options) (*model.ScanN
 
 // ScanBranch scans a folder up to maxDepth levels and merges structure into the returned subtree root.
 func (sc *Scanner) ScanBranch(ctx context.Context, branchPath, scanRoot string, maxDepth int, opts Options) (*model.ScanNode, []model.FileEntry, error) {
-	branchPath, err := filepath.Abs(branchPath)
+	branchAbs, err := safepath.UnderRoot(scanRoot, branchPath)
 	if err != nil {
-		return nil, nil, err
-	}
-	rootAbs, err := filepath.Abs(scanRoot)
-	if err != nil {
-		return nil, nil, err
-	}
-	if !isUnderRoot(rootAbs, branchPath) {
 		return nil, nil, os.ErrPermission
 	}
-	info, err := os.Stat(branchPath)
+	scx, err := openScanCtx(scanRoot)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer scx.close()
+
+	rel, err := safepath.Rel(scx.rootAbs, branchAbs)
+	if err != nil {
+		return nil, nil, os.ErrPermission
+	}
+	info, err := scx.root.Stat(rel)
 	if err != nil || !info.IsDir() {
 		return nil, nil, os.ErrInvalid
 	}
@@ -206,7 +244,7 @@ func (sc *Scanner) ScanBranch(ctx context.Context, branchPath, scanRoot string, 
 
 		node := newNode(dir)
 		node.IsDir = true
-		entries, err := os.ReadDir(dir)
+		entries, err := scx.readDir(dir)
 		if err != nil {
 			node.Scanned = true
 			return node, nil
@@ -221,7 +259,7 @@ func (sc *Scanner) ScanBranch(ctx context.Context, branchPath, scanRoot string, 
 			name := entry.Name()
 			full := filepath.Join(dir, name)
 
-			if entry.Type()&os.ModeSymlink != 0 && skipSymlink(full, st.visited) {
+			if entry.Type()&os.ModeSymlink != 0 && skipSymlinkAt(scx, full, st.visited) {
 				continue
 			}
 
@@ -231,7 +269,7 @@ func (sc *Scanner) ScanBranch(ctx context.Context, branchPath, scanRoot string, 
 
 			if entry.IsDir() {
 				if atLimit {
-					size, files, err := sc.aggregateDir(ctx, full, st, opts)
+					size, files, err := sc.aggregateDir(ctx, scx, full, st, opts)
 					if err != nil {
 						return nil, err
 					}
@@ -274,7 +312,7 @@ func (sc *Scanner) ScanBranch(ctx context.Context, branchPath, scanRoot string, 
 		return node, nil
 	}
 
-	tree, err := scanDir(branchPath, 1)
+	tree, err := scanDir(branchAbs, 1)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -284,10 +322,13 @@ func (sc *Scanner) ScanBranch(ctx context.Context, branchPath, scanRoot string, 
 // Scan walks the full tree (CLI --full).
 func (sc *Scanner) Scan(ctx context.Context, opts Options) (*model.ScanNode, []model.FileEntry, error) {
 	opts.MaxDepth = -1
-	root, err := prepareRoot(opts.Root)
+	scx, err := openScanCtx(opts.Root)
 	if err != nil {
 		return nil, nil, err
 	}
+	defer scx.close()
+
+	root := scx.rootAbs
 	st := newWalkState()
 
 	var scanDir func(string) (*model.ScanNode, error)
@@ -301,7 +342,7 @@ func (sc *Scanner) Scan(ctx context.Context, opts Options) (*model.ScanNode, []m
 
 		node := newNode(dir)
 		node.IsDir = true
-		entries, err := os.ReadDir(dir)
+		entries, err := scx.readDir(dir)
 		if err != nil {
 			node.Scanned = true
 			return node, nil
@@ -314,7 +355,7 @@ func (sc *Scanner) Scan(ctx context.Context, opts Options) (*model.ScanNode, []m
 			name := entry.Name()
 			full := filepath.Join(dir, name)
 
-			if entry.Type()&os.ModeSymlink != 0 && skipSymlink(full, st.visited) {
+			if entry.Type()&os.ModeSymlink != 0 && skipSymlinkAt(scx, full, st.visited) {
 				continue
 			}
 
@@ -354,7 +395,7 @@ func (sc *Scanner) Scan(ctx context.Context, opts Options) (*model.ScanNode, []m
 	return tree, st.largestFiles(), nil
 }
 
-func (sc *Scanner) aggregateDir(ctx context.Context, dir string, st *walkState, opts Options) (size, files int64, err error) {
+func (sc *Scanner) aggregateDir(ctx context.Context, scx *scanCtx, dir string, st *walkState, opts Options) (size, files int64, err error) {
 	var walk func(string) error
 	walk = func(path string) error {
 		if err := ctx.Err(); err != nil {
@@ -364,7 +405,7 @@ func (sc *Scanner) aggregateDir(ctx context.Context, dir string, st *walkState, 
 		st.cur = path
 		st.emit(opts)
 
-		entries, err := os.ReadDir(path)
+		entries, err := scx.readDir(path)
 		if err != nil {
 			return nil
 		}
@@ -375,7 +416,7 @@ func (sc *Scanner) aggregateDir(ctx context.Context, dir string, st *walkState, 
 			name := entry.Name()
 			full := filepath.Join(path, name)
 
-			if entry.Type()&os.ModeSymlink != 0 && skipSymlink(full, st.visited) {
+			if entry.Type()&os.ModeSymlink != 0 && skipSymlinkAt(scx, full, st.visited) {
 				continue
 			}
 
@@ -407,35 +448,12 @@ func (sc *Scanner) aggregateDir(ctx context.Context, dir string, st *walkState, 
 	return size, files, nil
 }
 
-func prepareRoot(root string) (string, error) {
-	abs, err := filepath.Abs(root)
-	if err != nil {
-		return "", err
-	}
-	info, err := os.Stat(abs)
-	if err != nil {
-		return "", err
-	}
-	if !info.IsDir() {
-		return "", os.ErrInvalid
-	}
-	return abs, nil
-}
-
 func newNode(dir string) *model.ScanNode {
 	name := filepath.Base(dir)
 	if name == "" || name == "." {
 		name = dir
 	}
 	return &model.ScanNode{Name: name, Path: dir, IsDir: true}
-}
-
-func isUnderRoot(root, target string) bool {
-	rel, err := filepath.Rel(filepath.Clean(root), filepath.Clean(target))
-	if err != nil {
-		return false
-	}
-	return rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))
 }
 
 func pushLargest(h *fileHeap, f model.FileEntry) {
@@ -507,7 +525,6 @@ func MergeBranch(root *model.ScanNode, targetPath string, branch *model.ScanNode
 }
 
 func recomputeAncestors(root *model.ScanNode, fromPath string) {
-	// Sizes from overview aggregates remain valid; only refresh parent chain file counts if needed.
 	_ = fromPath
 	_ = root
 }
@@ -516,16 +533,16 @@ func shouldSkipDir(path string) bool {
 	return safety.ShouldSkipScan(path)
 }
 
-func skipSymlink(path string, visited map[visitKey]struct{}) bool {
-	resolved, err := filepath.EvalSymlinks(path)
+func skipSymlinkAt(scx *scanCtx, absPath string, visited map[visitKey]struct{}) bool {
+	rel, err := safepath.Rel(scx.rootAbs, absPath)
 	if err != nil {
 		return true
 	}
-	info, err := os.Stat(resolved)
+	info, err := scx.root.Stat(rel)
 	if err != nil {
 		return true
 	}
-	key := visitKeyFromInfo(resolved, info)
+	key := visitKeyFromInfo(absPath, info)
 	if _, ok := visited[key]; ok {
 		return true
 	}
