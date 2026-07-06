@@ -1,0 +1,30 @@
+name: Branch drift check
+
+on:
+  push:
+    branches: [master, dev]
+  pull_request:
+    branches: [dev, master]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check master/dev alignment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Report drift
+        run: |
+          set -euo pipefail
+          bash scripts/check-branch-drift.sh || {
+            echo "::warning::Branch drift detected. Run Sync dev from master workflow or scripts/sync-dev-from-master.sh"
+            exit 0
+          }

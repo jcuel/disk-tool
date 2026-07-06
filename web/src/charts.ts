@@ -166,11 +166,17 @@ export function renderCharts(
         formatter: (p: { name: string; value: number }) =>
           `${p.name}<br/>${formatBytes(p.value)}`,
       },
-      grid: { left: 120, right: 20, top: 10, bottom: 30 },
-      xAxis: { type: "value", axisLabel: { formatter: (v: number) => formatBytes(v) } },
+      grid: { left: 120, right: 20, top: 10, bottom: 30, outerBoundsMode: "none" },
+      xAxis: {
+        type: "value",
+        containShape: false,
+        nameMoveOverlap: false,
+        axisLabel: { formatter: (v: number) => formatBytes(v) },
+      },
       yAxis: {
         type: "category",
         triggerEvent: true,
+        nameMoveOverlap: false,
         data: top.map((c) => c.name),
         inverse: true,
         axisLabel: { width: 110, overflow: "truncate" },

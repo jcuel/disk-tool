@@ -56,7 +56,24 @@ Release-Version: 1.1.0
 
 **Push permission:** if branch rules block `github-actions[bot]` from pushing to `master`, add repo secret **`GH_RELEASE_TOKEN`** (fine-grained PAT with **Contents** write on this repo) or grant Actions bypass on the master ruleset.
 
-After the release commit lands on `master`, sync the version back to `dev` (merge `master` → `dev` or cherry-pick the bump commit) so both branches stay aligned.
+After the release commit lands on `master`, **`dev` is synced automatically** via [Sync dev from master](https://github.com/jcuel/disk-tool/actions/workflows/sync-dev-from-master.yml) (opens a `master` → `dev` PR when drift is detected). See [Sync dev from master (branch drift)](#sync-dev-from-master-branch-drift) below.
+
+## Sync dev from master (branch drift)
+
+Release merges and version bumps on `master` can leave `dev` behind in **commit history** even when file content matches.
+
+| Check | Command / workflow |
+|-------|-------------------|
+| Report drift | `bash scripts/check-branch-drift.sh` |
+| Fix (open sync PR) | `bash scripts/sync-dev-from-master.sh` |
+| Automatic | [sync-dev-from-master.yml](.github/workflows/sync-dev-from-master.yml) on push to `master` and after Release version |
+| Weekly monitor | [branch-drift-check.yml](.github/workflows/branch-drift-check.yml) (warns only) |
+
+**Normal states:** `dev_ahead` (integration work before release) — no action. **`master_ahead`** — merge the auto-opened `master` → `dev` PR.
+
+**Optional repo variable:** `AUTO_MERGE_BRANCH_SYNC=true` auto-merges sync PRs when drift is history-only (same tree).
+
+**Optional secret:** `GH_BRANCH_SYNC` — PAT with `contents` + `pull_requests` write if the default `GITHUB_TOKEN` cannot open PRs.
 
 ## Getting started
 

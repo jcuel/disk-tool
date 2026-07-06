@@ -1,0 +1,57 @@
+name: Sync dev from master
+
+on:
+  push:
+    branches: [master]
+  workflow_run:
+    workflows: [Release version]
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  sync:
+    name: Open master → dev sync PR
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success' ||
+      github.event.workflow_run.conclusion == 'skipped'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check branch drift
+        id: drift
+        run: |
+          set -euo pipefail
+          set +e
+          report="$(bash scripts/check-branch-drift.sh --quiet 2>&1)"
+          code=$?
+          set -e
+          echo "$report"
+          eval "$(echo "$report" | grep -E '^[a-z_]+=')"
+          echo "status=${branch_drift_status}" >> "$GITHUB_OUTPUT"
+          echo "master_ahead=${master_ahead}" >> "$GITHUB_OUTPUT"
+          echo "tree_match=${tree_match}" >> "$GITHUB_OUTPUT"
+          if [[ $code -eq 0 ]]; then
+            echo "needs_sync=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needs_sync=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open sync PR
+        if: steps.drift.outputs.needs_sync == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_BRANCH_SYNC || github.token }}
+          AUTO_MERGE_BRANCH_SYNC: ${{ vars.AUTO_MERGE_BRANCH_SYNC }}
+        run: bash scripts/sync-dev-from-master.sh
+
+      - name: No drift
+        if: steps.drift.outputs.needs_sync != 'true'
+        run: echo "dev is aligned with master (or dev is ahead — normal pre-release)."
