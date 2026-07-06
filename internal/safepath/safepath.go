@@ -14,34 +14,31 @@ var (
 )
 
 func ResolveRoot(userPath string) (string, error) {
-	if userPath == "" {
-		return "", ErrEmptyPath
-	}
-	if strings.Contains(userPath, "\x00") {
-		return "", ErrEmptyPath
-	}
-	abs, err := filepath.Abs(userPath)
+	root, abs, err := OpenRoot(userPath)
 	if err != nil {
 		return "", err
 	}
-	abs = filepath.Clean(abs)
-	info, err := os.Stat(abs)
-	if err != nil {
-		return "", err
-	}
-	if !info.IsDir() {
-		return "", ErrNotDir
-	}
+	_ = root.Close()
 	return abs, nil
 }
 
 func OpenRoot(userPath string) (*os.Root, string, error) {
-	abs, err := ResolveRoot(userPath)
+	if userPath == "" {
+		return nil, "", ErrEmptyPath
+	}
+	if strings.Contains(userPath, "\x00") {
+		return nil, "", ErrEmptyPath
+	}
+	abs, err := filepath.Abs(userPath)
 	if err != nil {
 		return nil, "", err
 	}
+	abs = filepath.Clean(abs)
 	root, err := os.OpenRoot(abs)
 	if err != nil {
+		if errors.Is(err, os.ErrInvalid) {
+			return nil, "", ErrNotDir
+		}
 		return nil, "", err
 	}
 	return root, abs, nil
