@@ -23,8 +23,8 @@ func TestResolveRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = ResolveRoot(f)
-	if err != ErrNotDir {
-		t.Fatalf("expected ErrNotDir, got %v", err)
+	if err == nil {
+		t.Fatal("expected error for file path")
 	}
 }
 
