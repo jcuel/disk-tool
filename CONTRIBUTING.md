@@ -58,6 +58,10 @@ Release-Version: 1.1.0
 
 After the release commit lands on `master`, **`dev` is synced automatically** via [Sync dev from master](https://github.com/jcuel/disk-tool/actions/workflows/sync-dev-from-master.yml) (opens a `master` → `dev` PR when drift is detected). See [Sync dev from master (branch drift)](#sync-dev-from-master-branch-drift) below.
 
+### Release binaries
+
+When tag `vX.Y.Z` is pushed, [Release assets](https://github.com/jcuel/disk-tool/actions/workflows/release-assets.yml) builds and uploads Windows, Linux, and macOS binaries to the GitHub Release.
+
 ## Sync dev from master (branch drift)
 
 Release merges and version bumps on `master` can leave `dev` behind in **commit history** even when file content matches.
