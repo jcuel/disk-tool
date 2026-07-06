@@ -1,0 +1,14 @@
+{
+  "name": "disk-tool-site",
+  "private": true,
+  "version": "1.2.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc && vite build",
+    "dev": "vite"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vite": "^6.4.3"
+  }
+}

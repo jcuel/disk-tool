@@ -10,6 +10,7 @@ import {
   findNode,
   formatBytes,
   getScan,
+  isDemoMode,
   needsExpand,
   openPath,
   reanalyzeInsights,
@@ -24,6 +25,14 @@ import { initCharts, pct, renderCharts, renderDiskPie } from "./charts";
 import "./styles.css";
 
 const app = document.getElementById("app")!;
+
+if (isDemoMode) {
+  const banner = document.createElement("div");
+  banner.className = "demo-banner";
+  banner.innerHTML =
+    'Sample scan — <a href="/disk-tool/">install disk-tool</a> to analyze your own disk.';
+  document.body.prepend(banner);
+}
 
 app.innerHTML = `
 <header>
@@ -226,7 +235,7 @@ fetchRoots().then(async (roots) => {
     rootsSelect.appendChild(opt);
   }
   const { root: queryRoot, noAutoScan } = queryParams();
-  const scanRoot = queryRoot || pickDefaultRoot(roots);
+  const scanRoot = queryRoot || (isDemoMode ? "/demo/projects" : pickDefaultRoot(roots));
   if (scanRoot) {
     pathInput.value = scanRoot;
     if (roots.includes(scanRoot)) {
