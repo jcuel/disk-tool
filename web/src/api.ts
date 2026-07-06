@@ -121,7 +121,16 @@ export interface ProgressEvent {
   error?: string;
 }
 
+export interface DiskInfo {
+  path: string;
+  total: number;
+  free: number;
+  used: number;
+}
+
 export const DEFAULT_DRILL_DEPTH = 5;
+
+export const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
 export function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -133,150 +142,6 @@ export function formatBytes(n: number): string {
     i++;
   }
   return `${v.toFixed(1)} ${units[i]}`;
-}
-
-export async function fetchRoots(): Promise<string[]> {
-  const r = await fetch("/api/roots");
-  const j = await r.json();
-  return j.roots as string[];
-}
-
-export interface DiskInfo {
-  path: string;
-  total: number;
-  free: number;
-  used: number;
-}
-
-export async function fetchDisk(path: string): Promise<DiskInfo> {
-  const r = await fetch(`/api/disk?path=${encodeURIComponent(path)}`);
-  if (!r.ok) {
-    const e = await r.json();
-    throw new Error(e.error || "disk info failed");
-  }
-  return r.json();
-}
-
-export async function startScan(root: string): Promise<string> {
-  const r = await fetch("/api/scans", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ root }),
-  });
-  if (!r.ok) {
-    const e = await r.json();
-    throw new Error(e.error || "scan failed");
-  }
-  const j = await r.json();
-  return j.scanId as string;
-}
-
-export async function expandScan(
-  id: string,
-  path: string,
-  depth = DEFAULT_DRILL_DEPTH
-): Promise<void> {
-  const r = await fetch(`/api/scans/${id}/expand`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path, depth }),
-  });
-  if (!r.ok) {
-    const e = await r.json();
-    throw new Error(e.error || "expand failed");
-  }
-}
-
-export async function getScan(id: string): Promise<ScanJob> {
-  const r = await fetch(`/api/scans/${id}`);
-  if (!r.ok) throw new Error("scan not found");
-  return r.json();
-}
-
-export async function deletePath(id: string, path: string, confirmPhrase = "DELETE"): Promise<void> {
-  const r = await fetch(`/api/scans/${id}/delete`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path, confirm: true, confirmPhrase }),
-  });
-  if (!r.ok) {
-    const e = await r.json();
-    throw new Error(e.error || "delete failed");
-  }
-}
-
-export async function openPath(id: string, path: string): Promise<void> {
-  const r = await fetch(`/api/scans/${id}/open`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path }),
-  });
-  if (!r.ok) {
-    const e = await r.json();
-    throw new Error(e.error || "open failed");
-  }
-}
-
-export async function runCleanup(id: string, req: CleanupRequest): Promise<CleanupReport> {
-  const r = await fetch(`/api/scans/${id}/cleanup`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(req),
-  });
-  if (!r.ok) {
-    const e = await r.json();
-    throw new Error(e.error || "cleanup failed");
-  }
-  return r.json();
-}
-
-export async function cancelScan(id: string): Promise<void> {
-  await fetch(`/api/scans/${id}`, { method: "DELETE" });
-}
-
-export async function fetchMaintenancePresets(id: string): Promise<{
-  presets: { id: string; name: string; description: string; autoSelect: boolean }[];
-  matches: MaintenancePresetMatch[];
-}> {
-  const r = await fetch(`/api/scans/${id}/maintenance-presets`);
-  if (!r.ok) throw new Error("presets failed");
-  return r.json();
-}
-
-export async function reanalyzeInsights(
-  id: string,
-  cfg: { ageThresholdDays: number; minSizeBytes: number }
-): Promise<InsightsReport> {
-  const r = await fetch(`/api/scans/${id}/reanalyze`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(cfg),
-  });
-  if (!r.ok) {
-    const e = await r.json();
-    throw new Error(e.error || "reanalyze failed");
-  }
-  return r.json();
-}
-
-export async function findDuplicates(id: string): Promise<DuplicateGroup[]> {
-  const r = await fetch(`/api/scans/${id}/duplicates`, { method: "POST" });
-  if (!r.ok) {
-    const e = await r.json();
-    throw new Error(e.error || "duplicate scan failed");
-  }
-  const j = await r.json();
-  return j.duplicateGroups as DuplicateGroup[];
-}
-
-export function connectEvents(
-  id: string,
-  onEvent: (ev: ProgressEvent) => void
-): WebSocket {
-  const proto = location.protocol === "https:" ? "wss" : "ws";
-  const ws = new WebSocket(`${proto}://${location.host}/api/scans/${id}/events`);
-  ws.onmessage = (msg) => onEvent(JSON.parse(msg.data));
-  return ws;
 }
 
 export function findNode(root: ScanNode | undefined, path: string): ScanNode | undefined {
@@ -293,3 +158,22 @@ export function needsExpand(node: ScanNode | undefined): boolean {
   if (!node || !node.isDir) return false;
   return node.expandable === true || (node.scanned === false && (node.fileCount > 0 || node.size > 0));
 }
+
+import * as live from "./api-live";
+import * as mock from "./demo/mock-api";
+
+const impl = isDemoMode ? mock : live;
+
+export const fetchRoots = impl.fetchRoots;
+export const fetchDisk = impl.fetchDisk;
+export const startScan = impl.startScan;
+export const expandScan = impl.expandScan;
+export const getScan = impl.getScan;
+export const deletePath = impl.deletePath;
+export const openPath = impl.openPath;
+export const runCleanup = impl.runCleanup;
+export const cancelScan = impl.cancelScan;
+export const fetchMaintenancePresets = impl.fetchMaintenancePresets;
+export const reanalyzeInsights = impl.reanalyzeInsights;
+export const findDuplicates = impl.findDuplicates;
+export const connectEvents = impl.connectEvents;

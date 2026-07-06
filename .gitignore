@@ -1,3 +1,5 @@
+/site/node_modules
+/site/dist
 /web/node_modules
 /web/dist
 /web/cypress/screenshots

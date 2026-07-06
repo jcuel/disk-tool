@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="disk-tool — local web disk usage analyzer. Find where disk space goes, review cleanup candidates, export support reports."
+    />
+    <title>disk-tool — local disk usage analyzer</title>
+    <link rel="stylesheet" href="/src/landing.css" />
+  </head>
+  <body>
+    <nav class="top-nav">
+      <a class="brand" href="/disk-tool/">disk-tool</a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#safety">Safety</a>
+        <a href="#screenshots">Screenshots</a>
+        <a href="#install">Install</a>
+        <a class="btn btn-primary nav-demo" href="/disk-tool/demo/">Try demo</a>
+      </div>
+    </nav>
+
+    <header class="hero" id="top">
+      <p class="eyebrow">Local · private · cross-platform</p>
+      <h1>Find where disk space goes</h1>
+      <p class="lead">
+        Overview-first disk analyzer with drill-down scanning, cleanup insights, and support-ready
+        exports. Runs on your machine — nothing leaves localhost.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="/disk-tool/demo/">Try live demo</a>
+        <a class="btn btn-secondary" href="https://github.com/jcuel/disk-tool">Install from GitHub</a>
+      </div>
+    </header>
+
+    <section class="section" id="features">
+      <h2>What disk-tool does</h2>
+      <div class="card-grid">
+        <article class="card">
+          <h3>What's eating my disk?</h3>
+          <p>Overview % breakdown, then drill into heavy folders on demand — no full-tree walk upfront.</p>
+        </article>
+        <article class="card">
+          <h3>Leftover dev junk</h3>
+          <p>Detects <code>node_modules</code>, <code>.venv</code>, <code>target/</code>, and common caches.</p>
+        </article>
+        <article class="card">
+          <h3>Old installers</h3>
+          <p>Flags large <code>.exe</code>, <code>.zip</code>, <code>.msi</code> files in Downloads and similar folders.</p>
+        </article>
+        <article class="card">
+          <h3>Support tickets</h3>
+          <p>Copy a report or export a plain-text support ticket for IT — treemap, tree, and insights included.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="safety">
+      <h2>Safe cleanup zones</h2>
+      <p class="section-lead">disk-tool classifies paths so you know what is safe to review or delete.</p>
+      <table class="data-table">
+        <thead>
+          <tr><th>Zone</th><th>Meaning</th><th>Delete via disk-tool?</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>review</strong></td><td>Regenerable dev artifacts</td><td>Yes, after review</td></tr>
+          <tr><td><strong>maintenance</strong></td><td>User temp folders</td><td>Yes, with age filter</td></tr>
+          <tr><td><strong>caution</strong></td><td>Shared caches (.npm, .gradle)</td><td>Review carefully</td></tr>
+          <tr><td><strong>diagnostic</strong></td><td>Crash dumps, minidumps</td><td>View only</td></tr>
+          <tr><td><strong>critical_os</strong></td><td>Windows, /usr, Program Files</td><td>No</td></tr>
+          <tr><td><strong>forbidden</strong></td><td>System32, /proc</td><td>Hidden from scan</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" id="screenshots">
+      <h2>In the app</h2>
+      <div class="screenshot-grid">
+        <figure>
+          <img src="/disk-tool/images/overview.svg" alt="Overview scan with folder tree and charts" width="800" height="450" loading="lazy" />
+          <figcaption>Overview scan with tree and charts</figcaption>
+        </figure>
+        <figure>
+          <img src="/disk-tool/images/insights.svg" alt="Insights panel with cleanup candidates" width="800" height="450" loading="lazy" />
+          <figcaption>Insights and cleanup candidates</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section" id="install">
+      <h2>Quick start</h2>
+      <p class="section-lead">Requires Node.js and Go. See the repo for Docker and CI details.</p>
+      <pre class="code-block"><code>cd web &amp;&amp; npm ci &amp;&amp; npm run build &amp;&amp; cd ..
+cp -r web/dist/* cmd/disk-tool/static/
+go build -o bin/disk-tool ./cmd/disk-tool
+./bin/disk-tool serve</code></pre>
+      <p>
+        <a href="https://github.com/jcuel/disk-tool/releases">Releases</a>
+        ·
+        <a href="https://github.com/jcuel/disk-tool#readme">Full README</a>
+      </p>
+    </section>
+
+    <footer class="site-footer">
+      <span>disk-tool <span id="site-version">1.2.0</span></span>
+      <a href="https://github.com/jcuel/disk-tool">GitHub</a>
+    </footer>
+
+    <script type="module" src="/src/landing.ts"></script>
+  </body>
+</html>

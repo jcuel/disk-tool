@@ -8,6 +8,19 @@
   --accent-hover: #2ea043;
 }
 
+.demo-banner {
+  padding: 0.5rem 1rem;
+  background: #1f3d2a;
+  border-bottom: 1px solid var(--accent);
+  color: var(--text);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.demo-banner a {
+  color: #58a6ff;
+}
+
 * {
   box-sizing: border-box;
 }
