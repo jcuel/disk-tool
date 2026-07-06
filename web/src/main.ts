@@ -21,6 +21,7 @@ import {
   type ScanJob,
   type ScanNode,
 } from "./api";
+import { exportScanClient } from "./export-client";
 import { initCharts, pct, renderCharts, renderDiskPie } from "./charts";
 import "./styles.css";
 
@@ -128,6 +129,16 @@ app.innerHTML = `
   </div>
 </div>
 `;
+
+function openExport(format: string) {
+  if (!scanId) return;
+  if (isDemoMode) {
+    if (!job) return;
+    exportScanClient(job, format);
+    return;
+  }
+  window.open(`/api/scans/${scanId}/export?format=${format}`, "_blank");
+}
 
 const pathInput = document.getElementById("path-input") as HTMLInputElement;
 const rootsSelect = document.getElementById("roots-select") as HTMLSelectElement;
@@ -638,7 +649,7 @@ function renderCleanupReport() {
   cleanupReportPanel.querySelectorAll("[data-export]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const fmt = (btn as HTMLElement).dataset.export;
-      window.open(`/api/scans/${scanId}/export?format=${fmt}`, "_blank");
+      if (fmt) openExport(fmt);
     });
   });
   document.getElementById("copy-cleanup-report")!.onclick = async () => {
@@ -942,15 +953,9 @@ expandBtn.onclick = async () => {
   if (selectedPath) await doExpand(selectedPath);
 };
 
-exportJson.onclick = () => {
-  if (scanId) window.open(`/api/scans/${scanId}/export?format=json`, "_blank");
-};
-exportHtml.onclick = () => {
-  if (scanId) window.open(`/api/scans/${scanId}/export?format=html`, "_blank");
-};
-exportTicket.onclick = () => {
-  if (scanId) window.open(`/api/scans/${scanId}/export?format=ticket`, "_blank");
-};
+exportJson.onclick = () => openExport("json");
+exportHtml.onclick = () => openExport("html");
+exportTicket.onclick = () => openExport("ticket");
 copyTicket.onclick = async () => {
   const text = job?.insights?.ticketText;
   if (!text) return;
