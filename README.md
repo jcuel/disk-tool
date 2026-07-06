@@ -42,6 +42,10 @@ Try a **sample scan in your browser** (no install): [jcuel.github.io/disk-tool/d
 
 Product overview: [jcuel.github.io/disk-tool/](https://jcuel.github.io/disk-tool/)
 
+## Download
+
+Pre-built binaries for Windows, Linux, and macOS are on the [Releases](https://github.com/jcuel/disk-tool/releases/latest) page. Download, extract, and run `disk-tool serve` (or `disk-tool.exe serve` on Windows).
+
 ## Quick start
 
 ```powershell
@@ -155,7 +159,3 @@ OpenSpec layout: `openspec/`. Slash commands: `.cursor/commands/`.
 | [LICENSE](LICENSE) | PolyForm Noncommercial — collaborate freely; commercial use requires permission |
 
 Contributors open PRs against **`dev`**. Only the maintainer merges **`dev` → `master`** for releases.
-
-## Reuse for new projects
-
-Copy [`template/`](template/) to bootstrap SPECBOOT + OpenSpec on a new repo. See [`template/README.md`](template/README.md).
