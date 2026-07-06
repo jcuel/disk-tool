@@ -3,49 +3,33 @@ package api
 import (
 	"errors"
 	"os"
-	"path/filepath"
-	"strings"
+
+	"github.com/jcuel/disk-tool/internal/safepath"
 )
 
 func ValidateRoot(root string) (string, error) {
-	if root == "" {
-		return "", errors.New("root path is required")
-	}
-	abs, err := filepath.Abs(root)
+	abs, err := safepath.ResolveRoot(root)
 	if err != nil {
+		if errors.Is(err, safepath.ErrEmptyPath) {
+			return "", errors.New("root path is required")
+		}
+		if errors.Is(err, safepath.ErrNotDir) {
+			return "", errors.New("root must be a directory")
+		}
 		return "", err
-	}
-	abs = filepath.Clean(abs)
-	info, err := os.Stat(abs)
-	if err != nil {
-		return "", err
-	}
-	if !info.IsDir() {
-		return "", errors.New("root must be a directory")
 	}
 	return abs, nil
 }
 
 func PathWithinRoot(root, target string) (string, error) {
-	rootAbs, err := filepath.Abs(root)
+	abs, err := safepath.UnderRoot(root, target)
 	if err != nil {
+		if errors.Is(err, safepath.ErrOutsideRoot) {
+			return "", errors.New("path outside scan root")
+		}
 		return "", err
 	}
-	targetAbs, err := filepath.Abs(target)
-	if err != nil {
-		return "", err
-	}
-	rootAbs = filepath.Clean(rootAbs)
-	targetAbs = filepath.Clean(targetAbs)
-
-	rel, err := filepath.Rel(rootAbs, targetAbs)
-	if err != nil {
-		return "", err
-	}
-	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-		return "", errors.New("path outside scan root")
-	}
-	return targetAbs, nil
+	return abs, nil
 }
 
 func CommonRoots() []string {
