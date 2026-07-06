@@ -50,6 +50,8 @@ After a successful **CI** run on a push to `master`, [`.github/workflows/sync-pr
 
 After a push to **`master`** (release merge), [`.github/workflows/release-version.yml`](../workflows/release-version.yml) bumps semver in `openspec/config.yaml`, the CLI, and web package, then tags `vX.Y.Z`. See [CONTRIBUTING.md](../CONTRIBUTING.md#release-to-master-version-bump).
 
+If `master` drifts ahead of `dev` (common after release), [`.github/workflows/sync-dev-from-master.yml`](../workflows/sync-dev-from-master.yml) opens a **`master` → `dev`** sync PR. Monitor with [branch-drift-check.yml](../workflows/branch-drift-check.yml).
+
 Requires repository secret **`GH_PROJECT_SYNC`**: a **classic** PAT (`ghp_…`) with **`project`** and **`repo`** scopes. Fine-grained PATs cannot write user-owned project boards ([GitHub docs](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token)). The default `GITHUB_TOKEN` cannot write user-owned project boards either.
 
 Create or rotate the secret:
