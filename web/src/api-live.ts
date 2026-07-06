@@ -1,4 +1,13 @@
-import type { ScanJob } from "./api";
+import type {
+  CleanupReport,
+  CleanupRequest,
+  DiskInfo,
+  DuplicateGroup,
+  InsightsReport,
+  MaintenancePresetMatch,
+  ScanEvent,
+  ScanJob,
+} from "./api";
 
 const DEFAULT_DRILL_DEPTH = 5;
 
@@ -131,7 +140,7 @@ export async function findDuplicates(id: string): Promise<DuplicateGroup[]> {
 
 export function connectEvents(
   id: string,
-  onEvent: (ev: ProgressEvent) => void
+  onEvent: (ev: ScanEvent) => void
 ): WebSocket {
   const proto = location.protocol === "https:" ? "wss" : "ws";
   const ws = new WebSocket(`${proto}://${location.host}/api/scans/${id}/events`);

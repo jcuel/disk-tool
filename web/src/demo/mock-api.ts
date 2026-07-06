@@ -3,7 +3,7 @@ import type {
   DuplicateGroup,
   InsightsReport,
   MaintenancePresetMatch,
-  ProgressEvent,
+  ScanEvent,
   ScanJob,
   ScanNode,
 } from "../api";
@@ -24,7 +24,7 @@ interface DemoFixtures {
 }
 
 const fixtures = raw as DemoFixtures;
-const listeners = new Set<(ev: ProgressEvent) => void>();
+const listeners = new Set<(ev: ScanEvent) => void>();
 
 function cloneScan(): ScanJob {
   return JSON.parse(JSON.stringify(fixtures.scan)) as ScanJob;
@@ -38,7 +38,7 @@ function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-function emit(ev: ProgressEvent) {
+function emit(ev: ScanEvent) {
   for (const fn of listeners) fn(ev);
 }
 
@@ -171,8 +171,8 @@ export async function findDuplicates(_id: string): Promise<DuplicateGroup[]> {
   return JSON.parse(JSON.stringify(fixtures.duplicateGroups)) as DuplicateGroup[];
 }
 
-export function connectEvents(id: string, onEvent: (ev: ProgressEvent) => void): WebSocket {
-  const handler = (ev: ProgressEvent) => {
+export function connectEvents(id: string, onEvent: (ev: ScanEvent) => void): WebSocket {
+  const handler = (ev: ScanEvent) => {
     if (!ev.scanId || ev.scanId === id) onEvent(ev);
   };
   listeners.add(handler);

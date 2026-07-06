@@ -109,7 +109,7 @@ export interface CleanupRequest {
   confirmPhrase: string;
 }
 
-export interface ProgressEvent {
+export interface ScanEvent {
   type: string;
   scanId?: string;
   status?: string;
