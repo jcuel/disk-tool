@@ -1,0 +1,142 @@
+{
+  "demoRoot": "/demo/projects",
+  "roots": [
+    "/demo/projects"
+  ],
+  "disk": {
+    "path": "/demo/projects",
+    "total": 549755813888,
+    "used": 408021893120,
+    "free": 141733920768
+  },
+  "scan": {
+    "id": "demo-scan-1",
+    "root": "/demo/projects",
+    "status": "completed",
+    "startedAt": "2026-07-05T23:48:22.1972298-03:00",
+    "completedAt": "2026-07-05T23:48:22.1983344-03:00",
+    "tree": {
+      "name": "e2e-root",
+      "path": "/demo/projects",
+      "size": 221,
+      "fileCount": 4,
+      "isDir": true,
+      "scanned": true,
+      "expandable": false,
+      "children": [
+        {
+          "name": "big-dir",
+          "path": "/demo/projects/big-dir",
+          "size": 199,
+          "fileCount": 2,
+          "isDir": true,
+          "scanned": true,
+          "expandable": false,
+          "children": [
+            {
+              "name": "nested",
+              "path": "/demo/projects/big-dir/nested",
+              "size": 7,
+              "fileCount": 1,
+              "isDir": true,
+              "scanned": true,
+              "expandable": false
+            }
+          ]
+        },
+        {
+          "name": "small-dir",
+          "path": "/demo/projects/small-dir",
+          "size": 6,
+          "fileCount": 1,
+          "isDir": true,
+          "scanned": false,
+          "expandable": true
+        }
+      ]
+    },
+    "largestFiles": [
+      {
+        "path": "/demo/projects/big-dir/nested/small.txt",
+        "name": "small.txt",
+        "size": 7
+      },
+      {
+        "path": "/demo/projects/big-dir/large.bin",
+        "name": "large.bin",
+        "size": 192
+      },
+      {
+        "path": "/demo/projects/big-dir/large.bin",
+        "name": "large.bin",
+        "size": 192
+      },
+      {
+        "path": "/demo/projects/big-dir/nested/small.txt",
+        "name": "small.txt",
+        "size": 7
+      },
+      {
+        "path": "/demo/projects/README.txt",
+        "name": "README.txt",
+        "size": 16
+      },
+      {
+        "path": "/demo/projects/small-dir/tiny.txt",
+        "name": "tiny.txt",
+        "size": 6
+      }
+    ],
+    "dirsScanned": 2,
+    "filesScanned": 1,
+    "bytesScanned": 192,
+    "currentPath": "/demo/projects/big-dir/nested",
+    "insights": {
+      "summary": "big-dir uses 90.0% of scanned space (199 B). Found 0 cleanup candidate(s) worth ~0 B if reviewed.",
+      "topConsumers": [
+        {
+          "name": "big-dir",
+          "path": "/demo/projects/big-dir",
+          "size": 199,
+          "pct": 90.04524886877829
+        },
+        {
+          "name": "small-dir",
+          "path": "/demo/projects/small-dir",
+          "size": 6,
+          "pct": 2.7149321266968327
+        }
+      ],
+      "cleanupCandidates": [],
+      "totalReclaimable": 0,
+      "ticketText": "Disk usage report\n=================\nGenerated: 2026-07-05T23:48:22-03:00\nScan root: /demo/projects\nTotal scanned: 221 B (4 files indexed)\n\nTop space consumers\n-------------------\n  90.0%  big-dir  (199 B)\n  2.7%  small-dir  (6 B)\n\nNote: Sizes are based on scanned portions of the tree. Protected OS and diagnostic zones cannot be deleted via disk-tool.\n",
+      "safetyGrid": {
+        "zones": {},
+        "driveRoot": false,
+        "protectedBytes": 0
+      }
+    },
+    "insightsConfig": {
+      "ageThresholdDays": 0,
+      "minSizeBytes": 0
+    }
+  },
+  "maintenancePresets": {
+    "presets": [
+      {
+        "id": "dev-reclaim",
+        "name": "Dev reclaim",
+        "description": "node_modules, target, build caches",
+        "autoSelect": true
+      },
+      {
+        "id": "temp-cleanup",
+        "name": "Temp cleanup",
+        "description": "User temp folders",
+        "autoSelect": false
+      }
+    ],
+    "matches": []
+  },
+  "duplicateGroups": []
+}

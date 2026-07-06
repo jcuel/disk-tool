@@ -36,6 +36,12 @@ Use **Maintenance presets** (Dev reclaim, Temp cleanup) for quick safe wins. Sca
 
 This avoids loading huge trees into memory and prevents scan deadlocks on large disks.
 
+## Live demo
+
+Try a **sample scan in your browser** (no install): [jcuel.github.io/disk-tool/demo/](https://jcuel.github.io/disk-tool/demo/)
+
+Product overview: [jcuel.github.io/disk-tool/](https://jcuel.github.io/disk-tool/)
+
 ## Quick start
 
 ```powershell
