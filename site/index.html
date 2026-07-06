@@ -7,6 +7,21 @@
       name="description"
       content="disk-tool — local web disk usage analyzer. Find where disk space goes, review cleanup candidates, export support reports."
     />
+    <meta property="og:title" content="disk-tool — local disk usage analyzer" />
+    <meta
+      property="og:description"
+      content="Overview-first disk scan with cleanup insights and support exports. Runs on localhost — try the demo or download a release."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://jcuel.github.io/disk-tool/" />
+    <meta property="og:image" content="https://jcuel.github.io/disk-tool/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="disk-tool — local disk usage analyzer" />
+    <meta
+      name="twitter:description"
+      content="Overview-first disk scan with cleanup insights. Try the live demo or download for Windows, Linux, and macOS."
+    />
+    <meta name="twitter:image" content="https://jcuel.github.io/disk-tool/og-image.png" />
     <title>disk-tool — local disk usage analyzer</title>
     <link rel="stylesheet" href="/src/landing.css" />
   </head>
@@ -18,7 +33,7 @@
         <a href="#safety">Safety</a>
         <a href="#screenshots">Screenshots</a>
         <a href="#install">Install</a>
-        <a class="btn btn-primary nav-demo" href="/disk-tool/demo/">Try demo</a>
+        <a class="btn btn-primary nav-demo" href="https://github.com/jcuel/disk-tool/releases/latest">Download</a>
       </div>
     </nav>
 
@@ -30,8 +45,8 @@
         exports. Runs on your machine — nothing leaves localhost.
       </p>
       <div class="hero-actions">
-        <a class="btn btn-primary" href="/disk-tool/demo/">Try live demo</a>
-        <a class="btn btn-secondary" href="https://github.com/jcuel/disk-tool">Install from GitHub</a>
+        <a class="btn btn-primary" href="https://github.com/jcuel/disk-tool/releases/latest">Download latest release</a>
+        <a class="btn btn-secondary" href="/disk-tool/demo/">Try live demo</a>
       </div>
     </header>
 
@@ -79,11 +94,11 @@
       <h2>In the app</h2>
       <div class="screenshot-grid">
         <figure>
-          <img src="images/overview.svg" alt="Overview scan with folder tree and charts" width="800" height="450" loading="lazy" />
+          <img src="images/overview.png" alt="Overview scan with folder tree and charts" width="800" height="450" loading="lazy" />
           <figcaption>Overview scan with tree and charts</figcaption>
         </figure>
         <figure>
-          <img src="images/insights.svg" alt="Insights panel with cleanup candidates" width="800" height="450" loading="lazy" />
+          <img src="images/insights.png" alt="Insights panel with cleanup candidates" width="800" height="450" loading="lazy" />
           <figcaption>Insights and cleanup candidates</figcaption>
         </figure>
       </div>
@@ -91,13 +106,23 @@
 
     <section class="section" id="install">
       <h2>Quick start</h2>
-      <p class="section-lead">Requires Node.js and Go. See the repo for Docker and CI details.</p>
-      <pre class="code-block"><code>cd web &amp;&amp; npm ci &amp;&amp; npm run build &amp;&amp; cd ..
+      <p class="section-lead">
+        Download a pre-built binary from
+        <a href="https://github.com/jcuel/disk-tool/releases/latest">Releases</a>
+        (Windows, Linux, macOS), or build from source below.
+      </p>
+      <pre class="code-block"><code># After download
+./disk-tool serve
+
+# Or build from source (Node.js + Go)
+cd web &amp;&amp; npm ci &amp;&amp; npm run build &amp;&amp; cd ..
 cp -r web/dist/* cmd/disk-tool/static/
 go build -o bin/disk-tool ./cmd/disk-tool
 ./bin/disk-tool serve</code></pre>
       <p>
-        <a href="https://github.com/jcuel/disk-tool/releases">Releases</a>
+        <a href="https://github.com/jcuel/disk-tool/releases/latest">Download latest</a>
+        ·
+        <a href="/disk-tool/demo/">Try demo</a>
         ·
         <a href="https://github.com/jcuel/disk-tool#readme">Full README</a>
       </p>
@@ -105,7 +130,11 @@ go build -o bin/disk-tool ./cmd/disk-tool
 
     <footer class="site-footer">
       <span>disk-tool <span id="site-version">1.2.0</span></span>
-      <a href="https://github.com/jcuel/disk-tool">GitHub</a>
+      <span>
+        <a href="https://github.com/jcuel/disk-tool/blob/dev/LICENSE">PolyForm Noncommercial</a>
+        ·
+        <a href="https://github.com/jcuel/disk-tool">GitHub</a>
+      </span>
     </footer>
 
     <script type="module" src="/src/landing.ts"></script>
