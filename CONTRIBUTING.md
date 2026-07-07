@@ -62,6 +62,38 @@ After the release commit lands on `master`, **`dev` is synced automatically** vi
 
 When tag `vX.Y.Z` is pushed, [Release assets](https://github.com/jcuel/disk-tool/actions/workflows/release-assets.yml) builds and uploads Windows, Linux, and macOS binaries to the GitHub Release.
 
+### Outreach automation
+
+After release assets upload, [Outreach on release](https://github.com/jcuel/disk-tool/actions/workflows/outreach-on-release.yml) can post Show HN and Reddit announcements using [`config/outreach.yaml`](config/outreach.yaml) and [`scripts/outreach/run.py`](scripts/outreach/run.py).
+
+**Off by default.** Set repository variable `OUTREACH_ENABLED=true` (Settings → Secrets and variables → Actions → Variables) only when ready for live posts.
+
+**Secrets** (Settings → Secrets and variables → Actions → Secrets):
+
+| Secret | Purpose |
+|--------|---------|
+| `HN_USERNAME`, `HN_PASSWORD` | Hacker News session login (unofficial — no write API) |
+| `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET` | Reddit OAuth script app |
+| `REDDIT_USERNAME`, `REDDIT_PASSWORD` | Reddit account |
+| `REDDIT_USER_AGENT` | Optional, e.g. `disk-tool-outreach/1.0 by u/yourname` |
+
+**Dry-run locally:**
+
+```bash
+pip install -r scripts/outreach/requirements.txt
+python scripts/outreach/run.py --dry-run --version 1.3.0
+```
+
+**Dry-run in CI:**
+
+```bash
+gh workflow run outreach-on-release.yml -f version=1.3.0 -f dry_run=true
+```
+
+Idempotency: successful runs append `outreach-posted: hn,reddit` to the GitHub Release notes. Re-runs skip channels already marked.
+
+See [`openspec/changes/outreach-automation/`](openspec/changes/outreach-automation/) for design notes and Cursor Automation setup.
+
 ## Sync dev from master (branch drift)
 
 Release merges and version bumps on `master` can leave `dev` behind in **commit history** even when file content matches.

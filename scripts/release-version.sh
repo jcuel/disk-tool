@@ -12,6 +12,12 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIG="$ROOT/openspec/config.yaml"
 BUMP_KIND="${BUMP_KIND:-minor}"
 
+# Strip Cursor/PR footers from explicit version env (first semver on first line only).
+if [[ -n "${RELEASE_VERSION:-}" ]]; then
+  RELEASE_VERSION="$(printf '%s' "$RELEASE_VERSION" | head -n1 | tr -d '\r' | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' || true)"
+  export RELEASE_VERSION
+fi
+
 current_version() {
   grep -E '^version:' "$CONFIG" | sed 's/version:[[:space:]]*//' | tr -d '\r'
 }
@@ -34,6 +40,8 @@ resolve_target() {
     return
   fi
   local msg="${COMMIT_MESSAGE:-}"
+  # Drop Cursor PR footer before parsing Release-Version.
+  msg="${msg%%Made with*}"
   if [[ "$msg" =~ [Rr]elease-[Vv]ersion:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+) ]]; then
     echo "${BASH_REMATCH[1]}"
     return

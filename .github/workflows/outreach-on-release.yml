@@ -1,0 +1,93 @@
+name: Outreach on release
+
+on:
+  workflow_run:
+    workflows: [Release assets]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Semver (e.g. 1.3.0)
+        required: true
+      dry_run:
+        description: Render only, no live posts
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  outreach:
+    name: Post HN and Reddit outreach
+    runs-on: ubuntu-latest
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.head_repository.full_name == github.repository &&
+          startsWith(github.event.workflow_run.head_branch, 'v')
+        )
+      }}
+    permissions:
+      contents: write
+    steps:
+      - name: Check outreach enabled
+        id: gate
+        run: |
+          if [[ "${{ vars.OUTREACH_ENABLED }}" != "true" && "${{ github.event_name }}" != "workflow_dispatch" ]]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "OUTREACH_ENABLED is not true — skipping automatic outreach."
+            exit 0
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: actions/setup-python@v5
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          python-version: "3.12"
+
+      - name: Install outreach dependencies
+        if: steps.gate.outputs.enabled == 'true'
+        run: pip install -r scripts/outreach/requirements.txt
+
+      - name: Resolve version
+        if: steps.gate.outputs.enabled == 'true'
+        id: ver
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            ref="${{ github.event.workflow_run.head_branch }}"
+            echo "version=${ref#v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run outreach
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          HN_USERNAME: ${{ secrets.HN_USERNAME }}
+          HN_PASSWORD: ${{ secrets.HN_PASSWORD }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USERNAME: ${{ secrets.REDDIT_USERNAME }}
+          REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
+          REDDIT_USER_AGENT: ${{ secrets.REDDIT_USER_AGENT }}
+        run: |
+          set -euo pipefail
+          args=(--version "${{ steps.ver.outputs.version }}")
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.dry_run }}" == "true" ]]; then
+            args+=(--dry-run)
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.dry_run }}" != "true" ]]; then
+            :
+          elif [[ "${{ vars.OUTREACH_DRY_RUN }}" == "true" ]]; then
+            args+=(--dry-run)
+          fi
+          python scripts/outreach/run.py "${args[@]}"

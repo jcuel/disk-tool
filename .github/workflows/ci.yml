@@ -236,3 +236,18 @@ jobs:
 
       - name: Build interactive demo
         run: cd web && npm ci && npm run build:demo
+
+  outreach-dry-run:
+    name: Outreach — template dry-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Outreach dry-run
+        run: |
+          pip install -r scripts/outreach/requirements.txt
+          python scripts/outreach/run.py --dry-run --version 1.0.0

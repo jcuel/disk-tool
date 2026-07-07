@@ -4,10 +4,10 @@ Use after **v1.3.0** is on [Releases](https://github.com/jcuel/disk-tool/release
 
 ## Repo polish (one-time)
 
-- [ ] Homepage: `https://jcuel.github.io/disk-tool/`
-- [ ] Description: *Local disk usage analyzer — overview-first scan, cleanup insights, support exports. Cross-platform Go + web UI.*
-- [ ] Topics: `disk-usage`, `disk-analyzer`, `storage`, `cleanup`, `go`, `devtools`, `treesize-alternative`
-- [ ] Release notes for v1.3.0 published
+- [x] Homepage: `https://jcuel.github.io/disk-tool/`
+- [x] Description: *Local disk usage analyzer — overview-first scan, cleanup insights, support exports. Cross-platform Go + web UI.*
+- [x] Topics: `disk-usage`, `disk-analyzer`, `storage`, `cleanup`, `go`, `devtools`, `treesize-alternative`
+- [x] Release notes for v1.3.0 published
 
 ## Messaging pillars
 
@@ -19,6 +19,29 @@ Use after **v1.3.0** is on [Releases](https://github.com/jcuel/disk-tool/release
 ## License (required in every post)
 
 PolyForm Noncommercial 1.0.0 — free for personal and noncommercial use. Commercial use requires permission. See [LICENSE](https://github.com/jcuel/disk-tool/blob/dev/LICENSE).
+
+## Automated outreach
+
+Templates and scripts live in [`config/outreach.yaml`](../../../config/outreach.yaml) and [`scripts/outreach/`](../../../scripts/outreach/).
+
+### Enable (maintainer, once)
+
+1. Add GitHub secrets: `HN_USERNAME`, `HN_PASSWORD`, `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USERNAME`, `REDDIT_PASSWORD`
+2. Set repo variable `OUTREACH_ENABLED=true` when ready for live posts (keep `false` until dry-run passes)
+3. Optional: install [hn-mcp](https://github.com/booklib-ai/hn-mcp) and create Cursor Automation — see [`cursor-automation-setup.md`](../outreach-automation/cursor-automation-setup.md)
+
+### Dry-run
+
+```bash
+pip install -r scripts/outreach/requirements.txt
+python scripts/outreach/run.py --dry-run --version 1.3.0
+```
+
+```bash
+gh workflow run outreach-on-release.yml -f version=1.3.0 -f dry_run=true
+```
+
+### Manual copy (fallback)
 
 ## Show HN (draft)
 
