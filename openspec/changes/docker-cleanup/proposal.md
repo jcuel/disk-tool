@@ -1,7 +1,7 @@
 # Proposal: Docker maintenance module
 
 **Change:** docker-cleanup
-**Status:** in progress
+**Status:** archived
 **Domain:** disk-tool
 
 ## Summary
