@@ -109,6 +109,35 @@ export interface CleanupRequest {
   confirmPhrase: string;
 }
 
+export interface DockerDiskUsage {
+  available: boolean;
+  daemonOk: boolean;
+  error?: string;
+  imagesSize: number;
+  imagesReclaimable: number;
+  containersSize: number;
+  containersReclaimable: number;
+  volumesSize: number;
+  volumesReclaimable: number;
+  buildCacheSize: number;
+  buildCacheReclaimable: number;
+  reclaimable: number;
+  rawDf?: string;
+}
+
+export interface DockerPruneReport {
+  dryRun: boolean;
+  reclaimable: number;
+  output?: string;
+  error?: string;
+}
+
+export interface DockerPruneRequest {
+  dryRun: boolean;
+  confirm: boolean;
+  confirmPhrase: string;
+}
+
 export interface ScanEvent {
   type: string;
   scanId?: string;
@@ -174,6 +203,8 @@ export const openPath = impl.openPath;
 export const runCleanup = impl.runCleanup;
 export const cancelScan = impl.cancelScan;
 export const fetchMaintenancePresets = impl.fetchMaintenancePresets;
+export const fetchDockerStatus = impl.fetchDockerStatus;
+export const dockerPrune = impl.dockerPrune;
 export const reanalyzeInsights = impl.reanalyzeInsights;
 export const findDuplicates = impl.findDuplicates;
 export const connectEvents = impl.connectEvents;

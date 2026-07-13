@@ -10,6 +10,7 @@ const (
 	CategoryDownload     CleanupCategory = "downloads"
 	CategoryLargeFile    CleanupCategory = "large_file"
 	CategoryStaleLarge   CleanupCategory = "stale-large-file"
+	CategoryDocker       CleanupCategory = "docker"
 )
 
 type CleanupCandidate struct {

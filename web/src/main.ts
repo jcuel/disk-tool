@@ -2,8 +2,10 @@ import {
   cancelScan,
   connectEvents,
   deletePath,
+  dockerPrune,
   expandScan,
   fetchDisk,
+  fetchDockerStatus,
   fetchMaintenancePresets,
   fetchRoots,
   findDuplicates,
@@ -17,6 +19,7 @@ import {
   runCleanup,
   startScan,
   type CleanupReport,
+  type DockerPruneReport,
   type MaintenancePresetMatch,
   type ScanJob,
   type ScanNode,
@@ -573,6 +576,10 @@ async function renderMaintenancePresets() {
 }
 
 function applyPreset(match: MaintenancePresetMatch) {
+  if (match.id === "docker-reclaim") {
+    void startDockerReclaimFlow();
+    return;
+  }
   selectedCleanup.clear();
   for (const p of match.paths) selectedCleanup.add(p);
   renderInsights();
@@ -581,6 +588,109 @@ function applyPreset(match: MaintenancePresetMatch) {
   } else if (match.matchCount > 0) {
     void startReviewCleanup();
   }
+}
+
+let pendingDockerDryRun: DockerPruneReport | null = null;
+
+async function startDockerReclaimFlow() {
+  if (!scanId) return;
+  setModalLoading("Checking Docker usage…");
+  try {
+    const status = await fetchDockerStatus(scanId);
+    const u = status.usage;
+    if (!u.available || !u.daemonOk) {
+      openModal(
+        "Docker reclaim",
+        `<p class="warning">${escapeHtml(u.error || "Docker CLI not available or daemon not running.")}</p>
+         <p>Install Docker Desktop (or the Docker CLI), ensure the daemon is running, and that <code>docker</code> is on PATH. Volumes are never pruned.</p>`,
+        [{ label: "Close", onClick: closeModal }]
+      );
+      return;
+    }
+    openDockerReviewModal(u.reclaimable, u.rawDf || "");
+  } catch (e) {
+    alert(String(e));
+    closeModal();
+  }
+}
+
+function openDockerReviewModal(reclaimable: number, rawDf: string) {
+  const body = `
+    <p>Reclaim unused Docker images, stopped containers, networks, and build cache via <code>docker system prune -af</code>.</p>
+    <p><strong>Estimated reclaimable:</strong> ${formatBytes(reclaimable)} (volumes are kept)</p>
+    ${rawDf ? `<pre class="modal-pre">${escapeHtml(rawDf)}</pre>` : ""}
+    <p class="hint">This does not delete Docker Desktop data folders or VHDX disk images.</p>`;
+  openModal("Review Docker reclaim", body, [
+    { label: "Cancel", onClick: closeModal },
+    {
+      label: "Continue",
+      primary: true,
+      onClick: async () => {
+        if (!scanId) return;
+        setModalLoading("Running Docker dry-run…");
+        try {
+          pendingDockerDryRun = await dockerPrune(scanId, {
+            dryRun: true,
+            confirm: false,
+            confirmPhrase: "",
+          });
+          showDockerConfirmModal();
+        } catch (e) {
+          alert(String(e));
+          openDockerReviewModal(reclaimable, rawDf);
+        }
+      },
+    },
+  ]);
+}
+
+function showDockerConfirmModal() {
+  const dry = pendingDockerDryRun;
+  const body = `
+    <p class="warning">This runs <code>docker system prune -af</code>. Named volumes and volume data are not removed.</p>
+    ${dry ? `<p>Dry-run reclaimable: <strong>${formatBytes(dry.reclaimable)}</strong></p>` : ""}
+    ${dry?.output ? `<pre class="modal-pre">${escapeHtml(dry.output)}</pre>` : ""}
+    ${dry?.error ? `<p class="warning">${escapeHtml(dry.error)}</p>` : ""}
+    <label class="confirm-check"><input type="checkbox" id="docker-reviewed" /> I reviewed this Docker prune</label>
+    <label>Type <strong>DELETE</strong> to confirm<br/><input type="text" id="docker-phrase" class="modal-input" autocomplete="off" /></label>`;
+  openModal("Confirm Docker prune", body, [
+    {
+      label: "Back",
+      onClick: () => openDockerReviewModal(dry?.reclaimable || 0, dry?.output || ""),
+    },
+    {
+      label: "Run prune",
+      danger: true,
+      onClick: async () => {
+        const reviewed = (document.getElementById("docker-reviewed") as HTMLInputElement).checked;
+        const phrase = (document.getElementById("docker-phrase") as HTMLInputElement).value.trim();
+        if (!reviewed) {
+          alert("Check the review confirmation box.");
+          return;
+        }
+        if (phrase !== "DELETE") {
+          alert("Type DELETE to confirm.");
+          return;
+        }
+        if (!scanId) return;
+        try {
+          setModalLoading("Pruning Docker resources…");
+          const report = await dockerPrune(scanId, {
+            dryRun: false,
+            confirm: true,
+            confirmPhrase: "DELETE",
+          });
+          pendingDockerDryRun = null;
+          closeModal();
+          await refreshJob();
+          alert(`Docker prune complete. Reclaimed about ${formatBytes(report.reclaimable)}.`);
+        } catch (e) {
+          alert(String(e));
+          showDockerConfirmModal();
+        }
+      },
+    },
+  ]);
 }
 
 function renderDuplicatesPanel() {
