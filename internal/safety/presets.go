@@ -37,6 +37,12 @@ var presetDefs = []Preset{
 		Description: "User temp folders tagged as maintenance zone",
 		AutoSelect:  true,
 	},
+	{
+		ID:          "docker-reclaim",
+		Name:        "Docker reclaim",
+		Description: "Unused Docker images/containers/build cache via docker system prune (volumes kept)",
+		AutoSelect:  false,
+	},
 }
 
 // AllPresets returns maintenance preset definitions.
@@ -62,6 +68,16 @@ func MatchPresets(candidates []model.CleanupCandidate) []PresetMatch {
 	for _, p := range presetDefs {
 		m := PresetMatch{ID: p.ID, Name: p.Name, Description: p.Description}
 		for _, c := range candidates {
+			if p.ID == "docker-reclaim" {
+				if c.Category != model.CategoryDocker {
+					continue
+				}
+				// Include reclaimable (deletable) and informational data-root rows.
+				m.MatchCount++
+				m.MatchBytes += c.Size
+				m.Paths = append(m.Paths, c.Path)
+				continue
+			}
 			if !c.Deletable {
 				continue
 			}
@@ -86,6 +102,8 @@ func presetMatches(id string, c model.CleanupCandidate) bool {
 		return c.Category == model.CategoryDownload || c.Category == model.CategoryStaleLarge
 	case "temp-cleanup":
 		return c.Zone == string(ZoneMaintenance)
+	case "docker-reclaim":
+		return c.Category == model.CategoryDocker && c.Deletable
 	default:
 		return false
 	}

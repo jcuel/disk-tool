@@ -2,6 +2,9 @@ import type {
   CleanupReport,
   CleanupRequest,
   DiskInfo,
+  DockerDiskUsage,
+  DockerPruneReport,
+  DockerPruneRequest,
   DuplicateGroup,
   InsightsReport,
   MaintenancePresetMatch,
@@ -109,6 +112,31 @@ export async function fetchMaintenancePresets(id: string): Promise<{
 }> {
   const r = await fetch(`/api/scans/${id}/maintenance-presets`);
   if (!r.ok) throw new Error("presets failed");
+  return r.json();
+}
+
+export async function fetchDockerStatus(id: string): Promise<{
+  usage: DockerDiskUsage;
+  dataRoots: { path: string; size: number; hint: string }[];
+}> {
+  const r = await fetch(`/api/scans/${id}/docker`);
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error((e as { error?: string }).error || "docker status failed");
+  }
+  return r.json();
+}
+
+export async function dockerPrune(id: string, req: DockerPruneRequest): Promise<DockerPruneReport> {
+  const r = await fetch(`/api/scans/${id}/docker/prune`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error((e as { error?: string }).error || "docker prune failed");
+  }
   return r.json();
 }
 

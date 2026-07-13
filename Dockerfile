@@ -7,7 +7,7 @@ COPY web/ ./
 RUN npm run build
 
 # Build Go binary
-FROM golang:1.25.11-alpine AS builder
+FROM golang:1.25.12-alpine AS builder
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
