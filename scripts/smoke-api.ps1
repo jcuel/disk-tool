@@ -55,6 +55,18 @@ try {
         Write-Host "OK POST /api/scans/{id}/expand"
     }
 
+    $docker = Invoke-RestMethod "$Base/api/scans/$scanId/docker"
+    if (-not $docker.usage) { throw "docker status missing usage" }
+    Write-Host "OK GET /api/scans/{id}/docker"
+
+    $dockerDry = Invoke-RestMethod -Method POST -Uri "$Base/api/scans/$scanId/docker/prune" -ContentType "application/json" -Body (@{
+        dryRun = $true
+        confirm = $false
+        confirmPhrase = ""
+    } | ConvertTo-Json)
+    if (-not $dockerDry.dryRun) { throw "docker prune dry-run failed" }
+    Write-Host "OK POST /api/scans/{id}/docker/prune dry-run"
+
     $ticket = Invoke-WebRequest "$Base/api/scans/$scanId/export?format=ticket" -UseBasicParsing
     if ($ticket.Content -notmatch "Disk usage report") { throw "ticket export failed" }
     Write-Host "OK export ticket"
