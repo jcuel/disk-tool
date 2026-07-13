@@ -1,7 +1,7 @@
 # Proposal: Protect virtual disk images from delete
 
 **Change:** protect-disk-images
-**Status:** in progress
+**Status:** archived
 
 ## Problem
 
