@@ -88,10 +88,9 @@ func RunCleanup(job *model.ScanJob, req model.CleanupRequest) (*model.CleanupRep
 			continue
 		}
 
-		zone := safety.ClassifyPath(abs)
-		if !safety.IsDeletable(zone) {
+		if ok, reason := safety.CanDeletePath(abs); !ok {
 			result.Status = model.CleanupStatusSkippedProtected
-			result.Reason = "protected zone: " + string(zone)
+			result.Reason = reason
 			report.Results = append(report.Results, result)
 			continue
 		}
