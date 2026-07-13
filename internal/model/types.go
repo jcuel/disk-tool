@@ -15,9 +15,10 @@ const (
 )
 
 type FileEntry struct {
-	Path string `json:"path"`
-	Name string `json:"name"`
-	Size int64  `json:"size"`
+	Path      string `json:"path"`
+	Name      string `json:"name"`
+	Size      int64  `json:"size"`
+	Deletable *bool  `json:"deletable,omitempty"`
 }
 
 type ScanNode struct {
