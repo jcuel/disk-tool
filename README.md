@@ -11,6 +11,7 @@ Guide users to **where disk space is consumed**, surface **actionable cleanup ca
 | "What's eating my disk?" | Overview % breakdown → drill into heavy folders |
 | "Leftover dev junk?" | Detects `node_modules`, `.venv`, `target/`, caches |
 | "Old installers in Downloads?" | Flags large `.exe`, `.zip`, `.msi`, etc. |
+| "Docker filling the disk?" | **Docker reclaim** preset — confirmed `docker system prune` (volumes kept) |
 | "Need a ticket for IT/support?" | **Copy report** or export **Support ticket** (plain text) |
 
 Insights improve as you drill — scan `Users` or `Projects` to uncover nested `node_modules` and caches.
@@ -21,12 +22,20 @@ Insights improve as you drill — scan `Users` or `Projects` to uncover nested `
 |------|---------|----------------------|
 | **review** | Regenerable dev artifacts (`node_modules`, `target/`) | Yes, after review |
 | **maintenance** | User temp folders | Yes, with age filter |
-| **caution** | Shared caches (`.npm`, `.gradle`) | Review carefully |
+| **caution** | Shared caches (`.npm`, `.gradle`), Docker data roots | Review carefully; Docker roots are **not** filesystem-deletable |
 | **diagnostic** | Crash dumps, minidumps | No — view only |
 | **critical_os** | Windows, `/usr`, Program Files | No |
 | **forbidden** | System32, `/proc` | Hidden from scan |
 
-Use **Maintenance presets** (Dev reclaim, Temp cleanup) for quick safe wins. Scan your user profile rather than `C:\` or `/` when cleaning up.
+**Also protected:** virtual disk / disk-image files (`.vhd`, `.vhdx`, `.vmdk`, etc.) — listed in Largest Files when large, but Delete is disabled and cleanup skips them.
+
+**Deletes always confirm:** single-file and bulk cleanup use review → dry-run → checkbox + type `DELETE` (no one-click browser prompt).
+
+Use **Maintenance presets** in Insights after a scan completes:
+- **Dev reclaim** / **Temp cleanup** / **Downloads sweep** — filesystem candidates
+- **Docker reclaim** — CLI prune of unused images/containers/build cache (requires Docker on PATH + running daemon; never deletes volumes or Docker Desktop data folders)
+
+Scan your user profile rather than `C:\` or `/` when cleaning up.
 
 ## How scanning works
 
@@ -87,8 +96,11 @@ On Linux/macOS use `make build` if Make is available.
 | WS | `/api/scans/{id}/events` | Progress + expand events |
 | GET | `/api/scans/{id}/export?format=json\|html\|ticket\|cleanup-json\|cleanup-html\|cleanup-ticket` | Export scan or cleanup report |
 | POST | `/api/scans/{id}/open` | Open path in OS file manager `{ "path": "..." }` |
-| POST | `/api/scans/{id}/delete` | Delete path under scan root `{ "path": "...", "confirm": true }` |
-| POST | `/api/scans/{id}/cleanup` | Bulk cleanup dry-run or execute `{ "paths": [...], "dryRun": true, "confirm": false }` |
+| POST | `/api/scans/{id}/delete` | Delete path under scan root `{ "path": "...", "confirm": true, "confirmPhrase": "DELETE" }` |
+| POST | `/api/scans/{id}/cleanup` | Bulk cleanup dry-run or execute `{ "paths": [...], "dryRun": true, "confirm": false, "confirmPhrase": "" }` |
+| GET | `/api/scans/{id}/maintenance-presets` | Maintenance preset definitions + matched paths |
+| GET | `/api/scans/{id}/docker` | Docker CLI status + `system df` summary (or unavailable) |
+| POST | `/api/scans/{id}/docker/prune` | Docker prune dry-run or execute `{ "dryRun": true }` / `{ "dryRun": false, "confirm": true, "confirmPhrase": "DELETE" }` (no `--volumes`) |
 
 ## CI and smoke tests
 
@@ -132,7 +144,7 @@ docker compose run --rm smoke          # CLI JSON scan
 docker compose run --rm smoke-api      # API smoke in Alpine
 ```
 
-**In-app Docker reclaim** (`docker-reclaim` preset) requires the `docker` CLI on PATH and a running daemon. It runs `docker system prune -af` (volumes are never pruned) and never deletes Docker data roots or VHDX files.
+**In-app Docker reclaim** (`docker-reclaim` preset under Insights → Maintenance presets) requires the `docker` CLI on PATH and a running daemon. It runs `docker system prune -af` (volumes are never pruned) and never deletes Docker data roots or VHDX files. If the daemon is down, Insights may still show the Desktop data folder as a non-deletable caution candidate.
 
 ## Development workflow (SPECBOOT)
 
