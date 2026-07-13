@@ -58,7 +58,7 @@ The web UI SHALL use a two-column grid for tree vs charts/files with equal colum
 
 ### Requirement: Largest files
 
-The system SHALL list the top 100 largest files found during a completed scan.
+The system SHALL list the top 100 largest files found during a completed scan. Each entry MAY include `deletable` indicating whether the UI may offer delete. Virtual disk / disk-image paths SHALL be marked non-deletable.
 
 ### Requirement: Export
 
@@ -100,11 +100,42 @@ The server SHALL bind to 127.0.0.1 only and reject paths outside the scan root.
 
 ### Requirement: Cleanup insights
 
-The system SHALL detect pattern-based cleanup candidates (dev artifacts, caches, downloads) with risk tiers and export them in insights, HTML, JSON, and support ticket formats.
+The system SHALL detect pattern-based cleanup candidates (dev artifacts, caches, downloads, Docker reclaimable usage) with risk tiers and export them in insights, HTML, JSON, and support ticket formats.
 
 ### Requirement: Safe delete
 
-The system SHALL expose `POST /api/scans/{id}/delete` requiring `confirm: true` and `confirmPhrase: "DELETE"`. Paths outside the scan root, the scan root itself, and protected safety zones SHALL be rejected.
+The system SHALL expose `POST /api/scans/{id}/delete` requiring `confirm: true` and `confirmPhrase: "DELETE"`. Paths outside the scan root, the scan root itself, protected safety zones, and virtual disk / disk-image extensions SHALL be rejected.
+
+### Requirement: Virtual disk image protection
+
+The system SHALL treat virtual disk and disk-image file extensions (including `.vhd`, `.vhdx`, `.avhd`, `.avhdx`, `.vmdk`, `.vdi`, `.qcow`, `.qcow2`, `.wim`, `.esd`, `.vfd`) as non-deletable. Single delete and bulk cleanup SHALL reject those paths. Cleanup insights SHALL NOT list them as download or stale-large candidates. Largest Files MAY still list them and SHALL mark them non-deletable in the UI.
+
+#### Scenario: Delete VHDX blocked
+
+- **WHEN** the client requests delete or cleanup execute for a `.vhdx` path under the scan root
+- **THEN** the server rejects the operation with a disk-image protection reason
+
+#### Scenario: Downloads VHD not a cleanup candidate
+
+- **WHEN** insights analyze a Downloads folder containing a large `.vhd` file
+- **THEN** that file is not included in cleanup candidates
+
+#### Scenario: Largest Files shows protected disk image
+
+- **WHEN** a scan's largest files include a `.vhdx`
+- **THEN** the scan response marks that entry `deletable: false`
+- **AND** the UI disables Delete for that row
+
+### Requirement: Single-path delete confirmation workflow
+
+The web UI SHALL NOT use a browser prompt for single-path delete from Largest Files or cleanup candidate rows. Delete SHALL open a modal review step, run a cleanup dry-run preflight, then require an explicit checkbox and typed `DELETE` before execute.
+
+#### Scenario: Largest Files delete confirmation
+
+- **WHEN** the user clicks Delete on a deletable Largest Files row
+- **THEN** a Review delete modal is shown
+- **AND** Continue runs a dry-run
+- **AND** Confirm delete requires review checkbox and phrase `DELETE` before permanent deletion
 
 ### Requirement: Open in file manager
 
@@ -112,7 +143,7 @@ The system SHALL expose `POST /api/scans/{id}/open` to launch the OS file manage
 
 ### Requirement: Guided bulk cleanup
 
-The system SHALL expose `POST /api/scans/{id}/cleanup` with dry-run and execute modes. Execute SHALL require typed confirmation and skip locked, missing, outside-root, and protected-zone paths.
+The system SHALL expose `POST /api/scans/{id}/cleanup` with dry-run and execute modes. Execute SHALL require typed confirmation and skip locked, missing, outside-root, protected-zone, and virtual disk / disk-image paths.
 
 ### Requirement: OS safety zones
 
@@ -122,9 +153,34 @@ The system SHALL classify paths into safety zones (forbidden, critical_os, diagn
 
 The insights report SHALL include a safety grid summarizing candidate counts and bytes per zone. The web UI SHALL display the grid with zone and risk badges on cleanup candidates.
 
+### Requirement: Docker maintenance
+
+The system SHALL detect Docker CLI availability and report reclaimable Docker usage (images, containers, build cache) when the daemon is reachable. The system SHALL expose scan-scoped Docker status and prune APIs. Prune execute SHALL require `confirm: true` and `confirmPhrase: "DELETE"`, SHALL run `docker system prune` without volume deletion, and SHALL NOT delete Docker data-root directories or virtual disk image files via the filesystem.
+
+#### Scenario: Docker status when CLI available
+
+- **WHEN** Docker CLI is on PATH and the daemon responds
+- **THEN** `GET /api/scans/{id}/docker` returns usage summary including reclaimable bytes
+
+#### Scenario: Docker status when CLI missing
+
+- **WHEN** Docker CLI is not available
+- **THEN** the status response indicates Docker is unavailable
+- **AND** insights MAY list known data-root paths as non-deletable caution candidates
+
+#### Scenario: Confirmed prune
+
+- **WHEN** the user confirms prune with phrase DELETE after dry-run review
+- **THEN** the server runs Docker system prune without `--volumes`
+- **AND** filesystem cleanup of Docker data roots remains blocked
+
 ### Requirement: Maintenance presets
 
-The system SHALL expose `GET /api/scans/{id}/maintenance-presets` returning preset definitions and matched deletable paths for one-click maintenance flows.
+The system SHALL expose `GET /api/scans/{id}/maintenance-presets` returning preset definitions (including `docker-reclaim`) and matched deletable paths for one-click maintenance flows.
+
+### Requirement: Docker reclaim preset
+
+The system SHALL provide a maintenance preset `docker-reclaim` that surfaces Docker reclaim candidates and drives the Docker prune confirmation flow (not bulk filesystem delete of Docker roots).
 
 ### Requirement: Age-based cleanup
 
