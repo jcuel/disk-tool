@@ -286,27 +286,20 @@ async function refreshJob() {
   renderUI();
 }
 
-function makeDeleteBtn(path: string, label: string, deletable = true): HTMLButtonElement {
+function makeDeleteBtn(path: string, label: string, deletable = true, size = 0): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.textContent = "Delete";
   btn.className = "link-btn danger";
   btn.type = "button";
   if (!deletable) {
     btn.disabled = true;
-    btn.title = "Protected zone — deletion disabled";
+    btn.title = "Protected — deletion disabled";
     return btn;
   }
-  btn.onclick = async (e) => {
+  btn.onclick = (e) => {
     e.stopPropagation();
     if (!scanId) return;
-    const phrase = prompt(`Type DELETE to permanently remove:\n\n${path}`);
-    if (phrase !== "DELETE") return;
-    try {
-      await deletePath(scanId, path, "DELETE");
-      await refreshJob();
-    } catch (err) {
-      alert(String(err));
-    }
+    openFileDeleteReview(path, size, label);
   };
   return btn;
 }
@@ -358,7 +351,18 @@ function renderLargestFiles() {
     actionsTd.className = "actions-cell";
     actionsTd.appendChild(makeOpenBtn(f.path));
     actionsTd.appendChild(document.createTextNode(" "));
-    actionsTd.appendChild(makeDeleteBtn(f.path, `${f.name}: ${formatBytes(f.size)}`));
+    const deletable = f.deletable !== false;
+    actionsTd.appendChild(
+      makeDeleteBtn(f.path, f.name, deletable, f.size)
+    );
+    if (!deletable) {
+      const tip = document.createElement("span");
+      tip.className = "muted";
+      tip.style.marginLeft = "0.35rem";
+      tip.title = "Virtual disk / disk image — deletion disabled";
+      tip.textContent = "(protected)";
+      actionsTd.appendChild(tip);
+    }
     tr.appendChild(actionsTd);
     filesBody.appendChild(tr);
   }
@@ -513,7 +517,7 @@ function renderInsights() {
     const openTd = document.createElement("td");
     openTd.appendChild(makeOpenBtn(c.path));
     openTd.appendChild(document.createTextNode(" "));
-    openTd.appendChild(makeDeleteBtn(c.path, `${c.category}: ${formatBytes(c.size)}`, c.deletable !== false));
+    openTd.appendChild(makeDeleteBtn(c.path, c.category, c.deletable !== false, c.size));
     tr.appendChild(openTd);
     tr.onclick = () => selectPath(c.path, true);
     cleanupBody.appendChild(tr);
@@ -825,6 +829,110 @@ async function startReviewCleanup() {
     return;
   }
   openReviewModal(items);
+}
+
+function openFileDeleteReview(path: string, size: number, label: string) {
+  const body = `
+    <p>You are about to permanently delete this path:</p>
+    <div class="modal-table-wrap">
+      <table class="modal-table">
+        <thead><tr><th>Name</th><th>Path</th><th>Size</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>${escapeHtml(label)}</td>
+            <td>${escapeHtml(path)}</td>
+            <td>${formatBytes(size)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="hint">Next step runs a dry-run check (protected zones, disk images, locked files).</p>`;
+  openModal("Review delete", body, [
+    { label: "Cancel", onClick: closeModal },
+    {
+      label: "Continue",
+      primary: true,
+      onClick: async () => {
+        if (!scanId) return;
+        setModalLoading("Running dry-run preflight…");
+        try {
+          pendingDryRun = await runCleanup(scanId, {
+            paths: [path],
+            dryRun: true,
+            confirm: false,
+            confirmPhrase: "",
+          });
+          showFileDeleteConfirm(path, size, label);
+        } catch (e) {
+          alert(String(e));
+          openFileDeleteReview(path, size, label);
+        }
+      },
+    },
+  ]);
+}
+
+function showFileDeleteConfirm(path: string, size: number, label: string) {
+  const dry = pendingDryRun;
+  const dryRows = (dry?.results || [])
+    .map(
+      (r) =>
+        `<tr><td>${escapeHtml(r.status)}</td><td>${escapeHtml(r.path)}</td><td>${formatBytes(r.size)}</td><td>${escapeHtml(r.reason || "")}</td></tr>`
+    )
+    .join("");
+  const wouldDelete = (dry?.results || []).some((r) => r.status === "would_delete");
+  const body = `
+    <p class="warning">This permanently deletes the file or folder. This cannot be undone.</p>
+    <p><strong>${escapeHtml(label)}</strong> · ${formatBytes(size)}</p>
+    <p class="file-path">${escapeHtml(path)}</p>
+    ${dry ? `<p>Dry-run: ${dry.results.filter((r) => r.status === "would_delete").length} ready, ${dry.results.filter((r) => r.status.startsWith("skipped")).length} skipped</p>` : ""}
+    ${dryRows ? `<div class="modal-table-wrap"><table class="modal-table"><thead><tr><th>Status</th><th>Path</th><th>Size</th><th>Reason</th></tr></thead><tbody>${dryRows}</tbody></table></div>` : ""}
+    <label class="confirm-check"><input type="checkbox" id="file-delete-reviewed" /> I reviewed this path</label>
+    <label>Type <strong>DELETE</strong> to confirm<br/><input type="text" id="file-delete-phrase" class="modal-input" autocomplete="off" /></label>`;
+  openModal("Confirm delete", body, [
+    { label: "Back", onClick: () => openFileDeleteReview(path, size, label) },
+    {
+      label: "Delete permanently",
+      danger: true,
+      onClick: async () => {
+        const reviewed = (document.getElementById("file-delete-reviewed") as HTMLInputElement).checked;
+        const phrase = (document.getElementById("file-delete-phrase") as HTMLInputElement).value.trim();
+        if (!reviewed) {
+          alert("Check the review confirmation box.");
+          return;
+        }
+        if (phrase !== "DELETE") {
+          alert("Type DELETE to confirm.");
+          return;
+        }
+        if (!wouldDelete) {
+          alert("Dry-run did not allow deletion for this path.");
+          return;
+        }
+        if (!scanId) return;
+        try {
+          setModalLoading("Deleting…");
+          const report = await runCleanup(scanId, {
+            paths: [path],
+            dryRun: false,
+            confirm: true,
+            confirmPhrase: "DELETE",
+          });
+          pendingDryRun = null;
+          closeModal();
+          await refreshJob();
+          const deleted = report.results.filter((r) => r.status === "deleted").length;
+          if (deleted === 0) {
+            const reason = report.results[0]?.reason || report.results[0]?.status || "unknown";
+            alert(`Delete blocked: ${reason}`);
+          }
+        } catch (e) {
+          alert(String(e));
+          showFileDeleteConfirm(path, size, label);
+        }
+      },
+    },
+  ]);
 }
 
 function openReviewModal(items: ReturnType<typeof selectedCandidates>) {
