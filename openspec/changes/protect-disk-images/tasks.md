@@ -5,3 +5,4 @@
 - [x] Skip in download/stale insights candidates
 - [x] Annotate `largestFiles[].deletable` for UI
 - [x] Unit tests for disk image detection
+- [x] Largest Files / single-delete uses review → confirm modal (not browser prompt)
