@@ -1,5 +1,6 @@
 import type {
   CleanupReport,
+  DockerDiskUsage,
   DuplicateGroup,
   InsightsReport,
   MaintenancePresetMatch,
@@ -160,6 +161,31 @@ export async function cancelScan(): Promise<void> {
 
 export async function fetchMaintenancePresets(_id: string) {
   return JSON.parse(JSON.stringify(fixtures.maintenancePresets));
+}
+
+export async function fetchDockerStatus(_id: string): Promise<{
+  usage: DockerDiskUsage;
+  dataRoots: { path: string; size: number; hint: string }[];
+}> {
+  const usage: DockerDiskUsage = {
+    available: false,
+    daemonOk: false,
+    error: "Docker reclaim is not available in demo mode",
+    imagesSize: 0,
+    imagesReclaimable: 0,
+    containersSize: 0,
+    containersReclaimable: 0,
+    volumesSize: 0,
+    volumesReclaimable: 0,
+    buildCacheSize: 0,
+    buildCacheReclaimable: 0,
+    reclaimable: 0,
+  };
+  return { usage, dataRoots: [] };
+}
+
+export async function dockerPrune(): Promise<never> {
+  throw new Error(DEMO_ERROR);
 }
 
 export async function reanalyzeInsights(_id: string): Promise<InsightsReport> {

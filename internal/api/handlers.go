@@ -12,6 +12,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/jcuel/disk-tool/internal/diskspace"
+	"github.com/jcuel/disk-tool/internal/docker"
 	"github.com/jcuel/disk-tool/internal/model"
 	"github.com/jcuel/disk-tool/internal/safety"
 	"github.com/jcuel/disk-tool/internal/scanner"
@@ -46,6 +47,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/scans/{id}/delete", s.handleDeletePath)
 	mux.HandleFunc("POST /api/scans/{id}/cleanup", s.handleCleanup)
 	s.registerSafetyRoutes(mux)
+	s.registerDockerRoutes(mux)
 	if s.static != nil {
 		mux.Handle("/", s.static)
 	}
@@ -263,6 +265,10 @@ func (s *Server) handleDeletePath(w http.ResponseWriter, r *http.Request) {
 	}
 	if ok, reason := safety.CanDeletePath(abs); !ok {
 		writeError(w, http.StatusBadRequest, reason)
+		return
+	}
+	if docker.IsDataRoot(abs) {
+		writeError(w, http.StatusBadRequest, "docker data root — use docker prune, filesystem delete disabled")
 		return
 	}
 	if err := DeletePath(abs); err != nil {

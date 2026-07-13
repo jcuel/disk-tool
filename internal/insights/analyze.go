@@ -1,12 +1,14 @@
 package insights
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/jcuel/disk-tool/internal/docker"
 	"github.com/jcuel/disk-tool/internal/model"
 	"github.com/jcuel/disk-tool/internal/safety"
 )
@@ -15,6 +17,8 @@ import (
 type Options struct {
 	AgeThresholdDays int
 	MinSizeBytes     int64
+	// SkipDocker omits Docker CLI/path candidates (useful in unit tests).
+	SkipDocker bool
 }
 
 const defaultAgeDays = 90
@@ -124,6 +128,10 @@ func AnalyzeWithOptions(job *model.ScanJob, opts Options) *model.InsightsReport 
 			addDownloadCandidate(report, seen, f)
 		}
 		addStaleCandidate(report, seen, f, opts)
+	}
+
+	if !opts.SkipDocker {
+		addDockerCandidates(report, seen)
 	}
 
 	tagCandidates(report)
@@ -238,6 +246,39 @@ func isStaleLocation(path string) bool {
 func isTempPath(path string) bool {
 	z := safety.ClassifyPath(path)
 	return z == safety.ZoneMaintenance
+}
+
+func addDockerCandidates(report *model.InsightsReport, seen map[string]bool) {
+	u := docker.Detect(context.Background())
+	if u.Available && u.DaemonOK && u.Reclaimable > 0 && !seen[docker.SyntheticPath] {
+		seen[docker.SyntheticPath] = true
+		c := model.CleanupCandidate{
+			Category:  model.CategoryDocker,
+			Path:      docker.SyntheticPath,
+			Size:      u.Reclaimable,
+			Hint:      "Unused Docker images/containers/build cache — use docker-reclaim preset (volumes kept)",
+			Risk:      "review",
+			Zone:      string(safety.ZoneReview),
+			Deletable: true,
+		}
+		report.CleanupCandidates = append(report.CleanupCandidates, c)
+		report.TotalReclaimable += c.Size
+	}
+	for _, root := range docker.DataRoots() {
+		if seen[root.Path] {
+			continue
+		}
+		seen[root.Path] = true
+		report.CleanupCandidates = append(report.CleanupCandidates, model.CleanupCandidate{
+			Category:  model.CategoryDocker,
+			Path:      root.Path,
+			Size:      root.Size,
+			Hint:      root.Hint,
+			Risk:      "caution",
+			Zone:      string(safety.ZoneCaution),
+			Deletable: false,
+		})
+	}
 }
 
 func addDownloadCandidate(report *model.InsightsReport, seen map[string]bool, f model.FileEntry) {
