@@ -93,7 +93,19 @@ func (s *Server) handleGetScan(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "scan not found")
 		return
 	}
+	annotateLargestFiles(job)
 	writeJSON(w, http.StatusOK, job)
+}
+
+func annotateLargestFiles(job *model.ScanJob) {
+	if job == nil {
+		return
+	}
+	for i := range job.LargestFiles {
+		ok, _ := safety.CanDeletePath(job.LargestFiles[i].Path)
+		d := ok
+		job.LargestFiles[i].Deletable = &d
+	}
 }
 
 func (s *Server) handleExpandScan(w http.ResponseWriter, r *http.Request) {
@@ -249,9 +261,8 @@ func (s *Server) handleDeletePath(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "cannot delete scan root")
 		return
 	}
-	zone := safety.ClassifyPath(abs)
-	if !safety.IsDeletable(zone) {
-		writeError(w, http.StatusBadRequest, "protected zone: "+string(zone))
+	if ok, reason := safety.CanDeletePath(abs); !ok {
+		writeError(w, http.StatusBadRequest, reason)
 		return
 	}
 	if err := DeletePath(abs); err != nil {

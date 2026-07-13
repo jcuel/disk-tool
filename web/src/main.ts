@@ -290,7 +290,7 @@ function makeDeleteBtn(path: string, label: string, deletable = true): HTMLButto
   btn.type = "button";
   if (!deletable) {
     btn.disabled = true;
-    btn.title = "Protected zone — deletion disabled";
+    btn.title = "Protected — deletion disabled";
     return btn;
   }
   btn.onclick = async (e) => {
@@ -355,7 +355,18 @@ function renderLargestFiles() {
     actionsTd.className = "actions-cell";
     actionsTd.appendChild(makeOpenBtn(f.path));
     actionsTd.appendChild(document.createTextNode(" "));
-    actionsTd.appendChild(makeDeleteBtn(f.path, `${f.name}: ${formatBytes(f.size)}`));
+    const deletable = f.deletable !== false;
+    actionsTd.appendChild(
+      makeDeleteBtn(f.path, `${f.name}: ${formatBytes(f.size)}`, deletable)
+    );
+    if (!deletable) {
+      const tip = document.createElement("span");
+      tip.className = "muted";
+      tip.style.marginLeft = "0.35rem";
+      tip.title = "Virtual disk / disk image — deletion disabled";
+      tip.textContent = "(protected)";
+      actionsTd.appendChild(tip);
+    }
     tr.appendChild(actionsTd);
     filesBody.appendChild(tr);
   }

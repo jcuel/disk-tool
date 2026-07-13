@@ -188,6 +188,9 @@ func buildSafetyGrid(root string, candidates []model.CleanupCandidate) *model.Sa
 }
 
 func addStaleCandidate(report *model.InsightsReport, seen map[string]bool, f model.FileEntry, opts Options) {
+	if safety.IsDiskImagePath(f.Path) || safety.IsDiskImagePath(f.Name) {
+		return
+	}
 	if seen[f.Path] {
 		return
 	}
@@ -238,6 +241,9 @@ func isTempPath(path string) bool {
 }
 
 func addDownloadCandidate(report *model.InsightsReport, seen map[string]bool, f model.FileEntry) {
+	if safety.IsDiskImagePath(f.Path) || safety.IsDiskImagePath(f.Name) {
+		return
+	}
 	ext := strings.ToLower(filepath.Ext(f.Name))
 	if !installerExt[ext] && f.Size < 50*1024*1024 {
 		return

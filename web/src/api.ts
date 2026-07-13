@@ -13,6 +13,7 @@ export interface FileEntry {
   path: string;
   name: string;
   size: number;
+  deletable?: boolean;
 }
 
 export interface CleanupCandidate {
