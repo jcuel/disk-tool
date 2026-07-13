@@ -4,21 +4,30 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/jcuel/disk-tool/internal/model"
 )
 
+func putCompletedJob(t *testing.T, store *Store, root string) *model.ScanJob {
+	t.Helper()
+	id := newScanID()
+	job := &model.ScanJob{
+		ID:     id,
+		Root:   root,
+		Status: model.ScanStatusCompleted,
+	}
+	store.mu.Lock()
+	store.jobs[id] = job
+	store.subscribers[id] = make(map[subscriber]struct{})
+	store.mu.Unlock()
+	return job
+}
+
 func TestDockerPrune_requiresConfirm(t *testing.T) {
 	store := NewStore()
-	dir := t.TempDir()
-	job, err := store.Start(dir, model.InsightsConfig{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	job.Status = model.ScanStatusCompleted
+	job := putCompletedJob(t, store, t.TempDir())
 	s := NewServer(store, nil)
 	body := `{"dryRun":false,"confirm":false,"confirmPhrase":""}`
 	req := httptest.NewRequest(http.MethodPost, "/api/scans/"+job.ID+"/docker/prune", strings.NewReader(body))
@@ -31,12 +40,7 @@ func TestDockerPrune_requiresConfirm(t *testing.T) {
 
 func TestDockerPrune_dryRunOK(t *testing.T) {
 	store := NewStore()
-	dir := t.TempDir()
-	job, err := store.Start(dir, model.InsightsConfig{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	job.Status = model.ScanStatusCompleted
+	job := putCompletedJob(t, store, t.TempDir())
 	s := NewServer(store, nil)
 	body := `{"dryRun":true}`
 	req := httptest.NewRequest(http.MethodPost, "/api/scans/"+job.ID+"/docker/prune", strings.NewReader(body))
@@ -62,5 +66,4 @@ func TestDockerStatus_notFound(t *testing.T) {
 	if rr.Code != http.StatusNotFound {
 		t.Fatalf("status %d", rr.Code)
 	}
-	_ = filepath.Separator
 }
