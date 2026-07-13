@@ -130,7 +130,7 @@ jobs:
 
       - name: Comment PR with inline screenshots
         if: github.event_name == 'pull_request' && always() && steps.publish-screenshots.outcome == 'success'
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-tag: e2e-screenshots-gallery
@@ -139,7 +139,7 @@ jobs:
 
       - name: Fallback PR comment (artifact link)
         if: github.event_name == 'pull_request' && always() && steps.publish-screenshots.outcome != 'success'
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-tag: e2e-screenshots-fallback
@@ -197,7 +197,7 @@ jobs:
 
       - name: Comment PR with Trivy report
         if: github.event_name == 'pull_request' && always()
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-tag: trivy-security-report
