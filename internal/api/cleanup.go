@@ -5,8 +5,10 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
+	"github.com/jcuel/disk-tool/internal/docker"
 	"github.com/jcuel/disk-tool/internal/model"
 	"github.com/jcuel/disk-tool/internal/safety"
 )
@@ -65,6 +67,13 @@ func RunCleanup(job *model.ScanJob, req model.CleanupRequest) (*model.CleanupRep
 			Category: categories[item.path],
 		}
 
+		if docker.IsDataRoot(item.path) || strings.HasPrefix(item.path, "docker://") {
+			result.Status = model.CleanupStatusSkippedProtected
+			result.Reason = "docker reclaim uses docker prune API, not filesystem delete"
+			report.Results = append(report.Results, result)
+			continue
+		}
+
 		abs, err := PathWithinRoot(job.Root, item.path)
 		if err != nil {
 			result.Status = model.CleanupStatusSkippedOutside
@@ -83,6 +92,12 @@ func RunCleanup(job *model.ScanJob, req model.CleanupRequest) (*model.CleanupRep
 		if !safety.IsDeletable(zone) {
 			result.Status = model.CleanupStatusSkippedProtected
 			result.Reason = "protected zone: " + string(zone)
+			report.Results = append(report.Results, result)
+			continue
+		}
+		if docker.IsDataRoot(item.path) || docker.IsDataRoot(abs) {
+			result.Status = model.CleanupStatusSkippedProtected
+			result.Reason = "docker data root — use docker prune, filesystem delete disabled"
 			report.Results = append(report.Results, result)
 			continue
 		}

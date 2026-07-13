@@ -150,6 +150,8 @@ bash scripts/e2e-run.sh          # optional; needs Node + Go
 .\scripts\smoke-api.ps1
 ```
 
+Docker reclaim (`docker-reclaim` preset) needs `docker` on PATH and a running daemon; CI uses fixtures when Docker is absent.
+
 ## Code style
 
 - Match existing patterns in the file you edit.

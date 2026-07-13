@@ -162,6 +162,30 @@ export async function fetchMaintenancePresets(_id: string) {
   return JSON.parse(JSON.stringify(fixtures.maintenancePresets));
 }
 
+export async function fetchDockerStatus(_id: string) {
+  return {
+    usage: {
+      available: false,
+      daemonOk: false,
+      error: "Docker reclaim is not available in demo mode",
+      imagesSize: 0,
+      imagesReclaimable: 0,
+      containersSize: 0,
+      containersReclaimable: 0,
+      volumesSize: 0,
+      volumesReclaimable: 0,
+      buildCacheSize: 0,
+      buildCacheReclaimable: 0,
+      reclaimable: 0,
+    },
+    dataRoots: [],
+  };
+}
+
+export async function dockerPrune(): Promise<never> {
+  throw new Error(DEMO_ERROR);
+}
+
 export async function reanalyzeInsights(_id: string): Promise<InsightsReport> {
   if (!job.insights) throw new Error("no insights");
   return JSON.parse(JSON.stringify(job.insights)) as InsightsReport;

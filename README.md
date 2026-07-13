@@ -132,6 +132,8 @@ docker compose run --rm smoke          # CLI JSON scan
 docker compose run --rm smoke-api      # API smoke in Alpine
 ```
 
+**In-app Docker reclaim** (`docker-reclaim` preset) requires the `docker` CLI on PATH and a running daemon. It runs `docker system prune -af` (volumes are never pruned) and never deletes Docker data roots or VHDX files.
+
 ## Development workflow (SPECBOOT)
 
 | Command | Stage |
