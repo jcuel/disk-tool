@@ -40,12 +40,30 @@ func TestClassifyPath_unixForbidden(t *testing.T) {
 	}
 }
 
-func TestIsDeletable(t *testing.T) {
-	if !IsDeletable(ZoneReview) {
-		t.Fatal("review should be deletable")
+func TestIsDiskImagePath(t *testing.T) {
+	cases := map[string]bool{
+		`C:\Users\x\Hyper-V\VM.vhdx`: true,
+		`/home/u/disk.vhd`:           true,
+		`C:\Users\x\vm.vmdk`:         true,
+		`C:\Users\x\box.vdi`:         true,
+		`/var/lib/libvirt/img.qcow2`: true,
+		`C:\Users\x\install.iso`:     false,
+		`C:\Users\x\big.zip`:         false,
 	}
-	if IsDeletable(ZoneForbidden) || IsDeletable(ZoneCriticalOS) || IsDeletable(ZoneDiagnostic) {
-		t.Fatal("protected zones must not be deletable")
+	for path, want := range cases {
+		if got := IsDiskImagePath(path); got != want {
+			t.Fatalf("%s: got %v want %v", path, got, want)
+		}
+	}
+}
+
+func TestCanDeletePath_diskImage(t *testing.T) {
+	ok, reason := CanDeletePath(`C:\Users\x\Disks\dev.vhdx`)
+	if ok {
+		t.Fatal("vhdx must not be deletable")
+	}
+	if reason == "" {
+		t.Fatal("expected reason")
 	}
 }
 
