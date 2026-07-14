@@ -150,7 +150,7 @@ bash scripts/e2e-run.sh          # optional; needs Node + Go
 .\scripts\smoke-api.ps1
 ```
 
-Docker reclaim (`docker-reclaim` preset) needs `docker` on PATH and a running daemon; CI uses fixtures when Docker is absent.
+Docker reclaim (`docker-reclaim` preset under Insights) needs `docker` on PATH and a running daemon; CI uses fixtures when Docker is absent. Virtual disk files (`.vhd`/`.vhdx`/…) must stay non-deletable; single delete uses the same review → dry-run → typed `DELETE` modal as bulk cleanup.
 
 ## Code style
 

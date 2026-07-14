@@ -10,7 +10,7 @@
     <meta property="og:title" content="disk-tool — local disk usage analyzer" />
     <meta
       property="og:description"
-      content="Overview-first disk scan with cleanup insights and support exports. Runs on localhost — try the demo or download a release."
+      content="Overview-first disk scan with cleanup insights, Docker reclaim, and support exports. Runs on localhost — try the demo or download a release."
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://jcuel.github.io/disk-tool/" />
@@ -19,7 +19,7 @@
     <meta name="twitter:title" content="disk-tool — local disk usage analyzer" />
     <meta
       name="twitter:description"
-      content="Overview-first disk scan with cleanup insights. Try the live demo or download for Windows, Linux, and macOS."
+      content="Overview-first disk scan with cleanup insights and Docker reclaim. Try the live demo or download for Windows, Linux, and macOS."
     />
     <meta name="twitter:image" content="https://jcuel.github.io/disk-tool/og-image.png" />
     <title>disk-tool — local disk usage analyzer</title>
@@ -41,7 +41,7 @@
       <p class="eyebrow">Local · private · cross-platform</p>
       <h1>Find where disk space goes</h1>
       <p class="lead">
-        Overview-first disk analyzer with drill-down scanning, cleanup insights, and support-ready
+        Overview-first disk analyzer with drill-down scanning, cleanup insights, Docker reclaim, and support-ready
         exports. Runs on your machine — nothing leaves localhost.
       </p>
       <div class="hero-actions">
@@ -66,6 +66,13 @@
           <p>Flags large <code>.exe</code>, <code>.zip</code>, <code>.msi</code> files in Downloads and similar folders.</p>
         </article>
         <article class="card">
+          <h3>Docker reclaim</h3>
+          <p>
+            Maintenance preset runs a confirmed <code>docker system prune</code> (volumes kept). Needs Docker CLI +
+            daemon — never deletes Desktop data folders or VHDX files.
+          </p>
+        </article>
+        <article class="card">
           <h3>Support tickets</h3>
           <p>Copy a report or export a plain-text support ticket for IT — treemap, tree, and insights included.</p>
         </article>
@@ -74,7 +81,10 @@
 
     <section class="section" id="safety">
       <h2>Safe cleanup zones</h2>
-      <p class="section-lead">disk-tool classifies paths so you know what is safe to review or delete.</p>
+      <p class="section-lead">
+        disk-tool classifies paths so you know what is safe to review or delete. Deletes use review → dry-run → type
+        <code>DELETE</code>. Virtual disks (<code>.vhd</code>/<code>.vhdx</code>/…) stay non-deletable.
+      </p>
       <table class="data-table">
         <thead>
           <tr><th>Zone</th><th>Meaning</th><th>Delete via disk-tool?</th></tr>
@@ -82,7 +92,7 @@
         <tbody>
           <tr><td><strong>review</strong></td><td>Regenerable dev artifacts</td><td>Yes, after review</td></tr>
           <tr><td><strong>maintenance</strong></td><td>User temp folders</td><td>Yes, with age filter</td></tr>
-          <tr><td><strong>caution</strong></td><td>Shared caches (.npm, .gradle)</td><td>Review carefully</td></tr>
+          <tr><td><strong>caution</strong></td><td>Shared caches, Docker data roots</td><td>Review carefully (Docker roots not FS-deletable)</td></tr>
           <tr><td><strong>diagnostic</strong></td><td>Crash dumps, minidumps</td><td>View only</td></tr>
           <tr><td><strong>critical_os</strong></td><td>Windows, /usr, Program Files</td><td>No</td></tr>
           <tr><td><strong>forbidden</strong></td><td>System32, /proc</td><td>Hidden from scan</td></tr>

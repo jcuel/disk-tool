@@ -18,7 +18,7 @@ trap cleanup EXIT
 
 cd "$ROOT/web"
 npm ci
-npm install --no-save cypress@14.3.2
+npm install --no-save cypress@15.18.1
 npm run build
 cd "$ROOT"
 rm -rf cmd/disk-tool/static/*
@@ -39,7 +39,8 @@ curl -sf "$BASE/api/roots" >/dev/null
 
 cd "$ROOT/web"
 export CYPRESS_BASE_URL="$BASE"
-npx cypress@14.3.2 run --env "scanRoot=$FIXTURE"
+# Cypress 15 uses tsx (not ts-node) so Node 20/22 + TypeScript 7 configs work.
+npx cypress@15.18.1 run --env "scanRoot=$FIXTURE"
 
 SHOT_COUNT="$(find cypress/screenshots -name '*.png' 2>/dev/null | wc -l | tr -d ' ')"
 echo "e2e-run: captured ${SHOT_COUNT} screenshot(s)"

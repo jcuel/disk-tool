@@ -57,34 +57,40 @@
     },
     "largestFiles": [
       {
-        "path": "/demo/projects/big-dir/nested/small.txt",
-        "name": "small.txt",
-        "size": 7
+        "path": "/demo/projects/Downloads/win11-dev.vhdx",
+        "name": "win11-dev.vhdx",
+        "size": 64424509440,
+        "deletable": false
       },
       {
-        "path": "/demo/projects/big-dir/large.bin",
-        "name": "large.bin",
-        "size": 192
-      },
-      {
-        "path": "/demo/projects/big-dir/large.bin",
-        "name": "large.bin",
-        "size": 192
+        "path": "/demo/projects/big-dir/node_modules/.package-lock.json",
+        "name": ".package-lock.json",
+        "size": 52428800,
+        "deletable": true
       },
       {
         "path": "/demo/projects/big-dir/nested/small.txt",
         "name": "small.txt",
-        "size": 7
+        "size": 7,
+        "deletable": true
+      },
+      {
+        "path": "/demo/projects/big-dir/large.bin",
+        "name": "large.bin",
+        "size": 192,
+        "deletable": true
       },
       {
         "path": "/demo/projects/README.txt",
         "name": "README.txt",
-        "size": 16
+        "size": 16,
+        "deletable": true
       },
       {
         "path": "/demo/projects/small-dir/tiny.txt",
         "name": "tiny.txt",
-        "size": 6
+        "size": 6,
+        "deletable": true
       }
     ],
     "dirsScanned": 2,
@@ -92,7 +98,7 @@
     "bytesScanned": 192,
     "currentPath": "/demo/projects/big-dir/nested",
     "insights": {
-      "summary": "big-dir uses 90.0% of scanned space (199 B). Found 0 cleanup candidate(s) worth ~0 B if reviewed.",
+      "summary": "big-dir uses 90.0% of scanned space. Docker reclaimable ~12.6 GB via CLI prune; VHDX files are protected from delete.",
       "topConsumers": [
         {
           "name": "big-dir",
@@ -107,18 +113,49 @@
           "pct": 2.7149321266968327
         }
       ],
-      "cleanupCandidates": [],
-      "totalReclaimable": 0,
-      "ticketText": "Disk usage report\n=================\nGenerated: 2026-07-05T23:48:22-03:00\nScan root: /demo/projects\nTotal scanned: 221 B (4 files indexed)\n\nTop space consumers\n-------------------\n  90.0%  big-dir  (199 B)\n  2.7%  small-dir  (6 B)\n\nNote: Sizes are based on scanned portions of the tree. Protected OS and diagnostic zones cannot be deleted via disk-tool.\n",
+      "cleanupCandidates": [
+        {
+          "category": "docker",
+          "path": "docker://reclaimable",
+          "size": 13543722188,
+          "hint": "Unused Docker images/containers/build cache — use docker-reclaim preset (volumes kept)",
+          "risk": "review",
+          "zone": "review",
+          "deletable": true
+        },
+        {
+          "category": "docker",
+          "path": "/Users/demo/Library/Containers/com.docker.docker/Data",
+          "size": 47231042854,
+          "hint": "Docker data root — reclaim via docker system prune or Docker Desktop; do not delete this folder",
+          "risk": "caution",
+          "zone": "caution",
+          "deletable": false
+        },
+        {
+          "category": "node_modules",
+          "path": "/demo/projects/big-dir/node_modules",
+          "size": 380000000,
+          "hint": "Dependencies from npm/yarn/pnpm — safe to delete; reinstall with npm install",
+          "risk": "review",
+          "zone": "review",
+          "deletable": true
+        }
+      ],
+      "totalReclaimable": 13923722188,
+      "ticketText": "Disk usage report\n=================\nScan root: /demo/projects\n\nCleanup notes\n-------------\n- Docker reclaimable via docker-reclaim preset (~12.6 GB); volumes kept\n- VHD/VHDX files are non-deletable\n- Deletes require review → dry-run → type DELETE\n",
       "safetyGrid": {
-        "zones": {},
+        "zones": {
+          "review": { "count": 2, "bytes": 13923722188 },
+          "caution": { "count": 1, "bytes": 47231042854 }
+        },
         "driveRoot": false,
-        "protectedBytes": 0
+        "protectedBytes": 47231042854
       }
     },
     "insightsConfig": {
-      "ageThresholdDays": 0,
-      "minSizeBytes": 0
+      "ageThresholdDays": 90,
+      "minSizeBytes": 52428800
     }
   },
   "maintenancePresets": {
@@ -126,17 +163,79 @@
       {
         "id": "dev-reclaim",
         "name": "Dev reclaim",
-        "description": "node_modules, target, build caches",
+        "description": "Regenerable project artifacts: node_modules, target, dist, build, __pycache__, .venv",
+        "autoSelect": true
+      },
+      {
+        "id": "cache-review",
+        "name": "Cache review",
+        "description": "Shared package caches — opens review only, never auto-selected",
+        "autoSelect": false
+      },
+      {
+        "id": "downloads-sweep",
+        "name": "Downloads sweep",
+        "description": "Stale installers and large archives in Downloads",
         "autoSelect": true
       },
       {
         "id": "temp-cleanup",
         "name": "Temp cleanup",
-        "description": "User temp folders",
+        "description": "User temp folders tagged as maintenance zone",
+        "autoSelect": true
+      },
+      {
+        "id": "docker-reclaim",
+        "name": "Docker reclaim",
+        "description": "Unused Docker images/containers/build cache via docker system prune (volumes kept)",
         "autoSelect": false
       }
     ],
-    "matches": []
+    "matches": [
+      {
+        "id": "dev-reclaim",
+        "name": "Dev reclaim",
+        "description": "Regenerable project artifacts: node_modules, target, dist, build, __pycache__, .venv",
+        "matchCount": 1,
+        "matchBytes": 380000000,
+        "paths": ["/demo/projects/big-dir/node_modules"]
+      },
+      {
+        "id": "cache-review",
+        "name": "Cache review",
+        "description": "Shared package caches — opens review only, never auto-selected",
+        "matchCount": 0,
+        "matchBytes": 0,
+        "paths": []
+      },
+      {
+        "id": "downloads-sweep",
+        "name": "Downloads sweep",
+        "description": "Stale installers and large archives in Downloads",
+        "matchCount": 0,
+        "matchBytes": 0,
+        "paths": []
+      },
+      {
+        "id": "temp-cleanup",
+        "name": "Temp cleanup",
+        "description": "User temp folders tagged as maintenance zone",
+        "matchCount": 0,
+        "matchBytes": 0,
+        "paths": []
+      },
+      {
+        "id": "docker-reclaim",
+        "name": "Docker reclaim",
+        "description": "Unused Docker images/containers/build cache via docker system prune (volumes kept)",
+        "matchCount": 2,
+        "matchBytes": 60774765042,
+        "paths": [
+          "docker://reclaimable",
+          "/Users/demo/Library/Containers/com.docker.docker/Data"
+        ]
+      }
+    ]
   },
   "duplicateGroups": []
 }
