@@ -15,7 +15,7 @@ try {
     if ($LASTEXITCODE -ne 0) {
         node node_modules\vite\bin\vite.js build 2>$null
     } else {
-        & "C:\Program Files\nodejs\npm.cmd" install --no-save cypress@14.3.2
+        & "C:\Program Files\nodejs\npm.cmd" install --no-save cypress@15.18.1
         & "C:\Program Files\nodejs\npm.cmd" run build
     }
 } finally {
@@ -45,7 +45,7 @@ try {
 
     Push-Location (Join-Path $Root "web")
     $env:CYPRESS_BASE_URL = $Base
-    npx cypress@14.3.2 run --env "scanRoot=$Fixture"
+    npx cypress@15.18.1 run --env "scanRoot=$Fixture"
     Pop-Location
     Write-Host "e2e-run: all Cypress specs passed"
 } finally {
