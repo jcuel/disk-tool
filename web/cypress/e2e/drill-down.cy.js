@@ -1,4 +1,4 @@
-import { scanRoot } from "../support/commands";
+import { scanRoot } from "../support/commands.js";
 
 describe("tree drill-down", () => {
   beforeEach(() => {
