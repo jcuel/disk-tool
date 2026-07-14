@@ -1,5 +1,6 @@
 import type {
   CleanupReport,
+  DockerDiskUsage,
   DuplicateGroup,
   InsightsReport,
   MaintenancePresetMatch,
@@ -160,6 +161,56 @@ export async function cancelScan(): Promise<void> {
 
 export async function fetchMaintenancePresets(_id: string) {
   return JSON.parse(JSON.stringify(fixtures.maintenancePresets));
+}
+
+export async function fetchDockerStatus(_id: string): Promise<{
+  usage: DockerDiskUsage;
+  dataRoots: { path: string; size: number; hint: string }[];
+}> {
+  const usage: DockerDiskUsage = {
+    available: true,
+    daemonOk: true,
+    imagesSize: 13.08 * 1024 * 1024 * 1024,
+    imagesReclaimable: 10.26 * 1024 * 1024 * 1024,
+    containersSize: 3.665 * 1024 * 1024,
+    containersReclaimable: 3.66 * 1024 * 1024,
+    volumesSize: 9.039 * 1024 * 1024 * 1024,
+    volumesReclaimable: 939.3 * 1024 * 1024,
+    buildCacheSize: 2.35 * 1024 * 1024 * 1024,
+    buildCacheReclaimable: 2.35 * 1024 * 1024 * 1024,
+    reclaimable: 13543722188,
+    rawDf:
+      "TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE\n" +
+      "Images          34        7         13.08GB   10.26GB (78%)\n" +
+      "Containers      7         2         3.665MB   3.66MB (99%)\n" +
+      "Local Volumes   11        5         9.039GB   939.3MB (10%)\n" +
+      "Build Cache     116       0         2.35GB    2.35GB\n",
+  };
+  return {
+    usage,
+    dataRoots: [
+      {
+        path: "/Users/demo/Library/Containers/com.docker.docker/Data",
+        size: 47231042854,
+        hint: "Docker data root — reclaim via docker system prune or Docker Desktop; do not delete this folder",
+      },
+    ],
+  };
+}
+
+export async function dockerPrune(
+  _id: string,
+  req: { dryRun: boolean; confirm: boolean; confirmPhrase: string }
+): Promise<{ dryRun: boolean; reclaimable: number; output?: string; error?: string }> {
+  if (req.dryRun) {
+    return {
+      dryRun: true,
+      reclaimable: 13543722188,
+      output:
+        "Demo dry-run only — install disk-tool locally to run docker system prune -af (volumes kept).",
+    };
+  }
+  throw new Error(DEMO_ERROR);
 }
 
 export async function reanalyzeInsights(_id: string): Promise<InsightsReport> {

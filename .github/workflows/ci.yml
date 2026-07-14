@@ -14,14 +14,14 @@ jobs:
     name: Linux — unit + API smoke
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
-          go-version: "1.25.11"
+          go-version: "1.25.12"
           cache-dependency-path: go.sum
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: npm
@@ -52,14 +52,14 @@ jobs:
     name: Windows — unit + API smoke
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
-          go-version: "1.25.11"
+          go-version: "1.25.12"
           cache-dependency-path: go.sum
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: npm
@@ -81,7 +81,7 @@ jobs:
     name: Linux — Docker smoke
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Docker CLI scan + API smoke
         run: bash scripts/smoke-docker.sh
@@ -93,16 +93,17 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
-          go-version: "1.25.11"
+          go-version: "1.25.12"
           cache-dependency-path: go.sum
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: "22"
+          # Cypress 14 + ESM TS config breaks on Node 22 ts-node hooks; LTS for E2E stability.
+          node-version: "20"
           cache: npm
           cache-dependency-path: web/package-lock.json
 
@@ -111,7 +112,7 @@ jobs:
 
       - name: Upload Cypress screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cypress-screenshots-pr-${{ github.event.pull_request.number || github.run_number }}
           path: web/cypress/screenshots/
@@ -130,7 +131,7 @@ jobs:
 
       - name: Comment PR with inline screenshots
         if: github.event_name == 'pull_request' && always() && steps.publish-screenshots.outcome == 'success'
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-tag: e2e-screenshots-gallery
@@ -139,7 +140,7 @@ jobs:
 
       - name: Fallback PR comment (artifact link)
         if: github.event_name == 'pull_request' && always() && steps.publish-screenshots.outcome != 'success'
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-tag: e2e-screenshots-fallback
@@ -156,7 +157,7 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Trivy filesystem scan
         id: trivy-fs
@@ -197,7 +198,7 @@ jobs:
 
       - name: Comment PR with Trivy report
         if: github.event_name == 'pull_request' && always()
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-tag: trivy-security-report
@@ -206,7 +207,7 @@ jobs:
 
       - name: Upload Trivy reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: trivy-reports-pr-${{ github.event.pull_request.number || github.run_number }}
           path: |
@@ -223,9 +224,9 @@ jobs:
     name: Site — landing + demo build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: npm
@@ -236,3 +237,18 @@ jobs:
 
       - name: Build interactive demo
         run: cd web && npm ci && npm run build:demo
+
+  outreach-dry-run:
+    name: Outreach — template dry-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Outreach dry-run
+        run: |
+          pip install -r scripts/outreach/requirements.txt
+          python scripts/outreach/run.py --dry-run --version 1.0.0

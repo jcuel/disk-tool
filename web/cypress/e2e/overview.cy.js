@@ -1,4 +1,4 @@
-import { scanRoot } from "../support/commands";
+import { scanRoot } from "../support/commands.js";
 
 describe("overview scan", () => {
   it("completes fixture scan and shows tree rows", () => {

@@ -24,7 +24,7 @@ Move status on the project board when stage changes. Keep issue **comments** upd
 | **v0.2 — Fixes & tooling** | #3 CLI JSON bug, #6 govulncheck |
 | **v1.0 — Cleanup insights v2** | #1 open in explorer, #2 safe delete |
 | **v1.1 — Safety & maintenance** | OS zones, safety grid, maintenance presets, age-based, duplicates |
-| **Future** | macOS zones, Docker cleanup |
+| **Future** | macOS zones |
 
 Set milestone when creating an issue. Filter the **By milestone** view to plan releases.
 

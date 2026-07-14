@@ -29,7 +29,7 @@ func TestAnalyzeNodeModules(t *testing.T) {
 			},
 		},
 	}
-	r := Analyze(job)
+	r := AnalyzeWithOptions(job, Options{AgeThresholdDays: 90, MinSizeBytes: 50 * 1024 * 1024, SkipDocker: true})
 	if len(r.CleanupCandidates) != 1 {
 		t.Fatalf("expected 1 candidate, got %d", len(r.CleanupCandidates))
 	}
