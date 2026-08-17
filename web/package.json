@@ -15,7 +15,7 @@
     "echarts": "^6.1.0"
   },
   "devDependencies": {
-    "cypress": "^15.18.1",
+    "cypress": "^15.20.1",
     "typescript": "^7.0.2",
     "vite": "^8.1.3"
   }
