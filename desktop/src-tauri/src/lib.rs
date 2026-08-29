@@ -1,7 +1,8 @@
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use tauri::{Manager, RunEvent, Url};
+use tauri::webview::WebviewWindowBuilder;
+use tauri::{Manager, RunEvent, Url, WebviewUrl};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 use tokio::time::timeout;
@@ -20,6 +21,12 @@ fn parse_ready_port(line: &str) -> Option<u16> {
         .parse()
         .ok()
         .filter(|p| *p > 0)
+}
+
+fn allows_localhost(url: &Url) -> bool {
+    url.scheme() == "about"
+        || (url.scheme() == "http"
+            && matches!(url.host_str(), Some("127.0.0.1" | "localhost")))
 }
 
 async fn start_sidecar(app: &tauri::AppHandle) -> Result<u16, String> {
@@ -43,10 +50,17 @@ async fn start_sidecar(app: &tauri::AppHandle) -> Result<u16, String> {
         }
 
         let remaining = deadline.saturating_duration_since(Instant::now());
-        let event = timeout(remaining, rx.recv())
-            .await
-            .map_err(|_| "sidecar startup timed out".to_string())?
-            .ok_or_else(|| "sidecar exited before ready".to_string())?;
+        let event = match timeout(remaining, rx.recv()).await {
+            Ok(Some(ev)) => ev,
+            Ok(None) => {
+                let _ = child.kill();
+                return Err("sidecar exited before ready".into());
+            }
+            Err(_) => {
+                let _ = child.kill();
+                return Err("sidecar startup timed out".into());
+            }
+        };
 
         match event {
             CommandEvent::Stdout(bytes) => {
@@ -61,12 +75,14 @@ async fn start_sidecar(app: &tauri::AppHandle) -> Result<u16, String> {
                 }
             }
             CommandEvent::Terminated(payload) => {
+                let _ = child.kill();
                 return Err(format!(
                     "sidecar exited before ready (code={:?}, signal={:?})",
                     payload.code, payload.signal
                 ));
             }
             CommandEvent::Error(err) => {
+                let _ = child.kill();
                 return Err(format!("sidecar error: {err}"));
             }
             _ => {}
@@ -101,14 +117,17 @@ pub fn run() {
             tauri::async_runtime::block_on(async move {
                 let port = start_sidecar(&handle).await?;
                 let url = format!("http://127.0.0.1:{port}");
-                let window = handle
-                    .get_webview_window("main")
-                    .ok_or("main window not found")?;
-                window
-                    .navigate(
-                        Url::parse(&url).map_err(|e| format!("invalid sidecar url: {e}"))?,
-                    )
-                    .map_err(|e| format!("navigate webview: {e}"))?;
+                let parsed =
+                    Url::parse(&url).map_err(|e| format!("invalid sidecar url: {e}"))?;
+
+                WebviewWindowBuilder::new(&handle, "main", WebviewUrl::External(parsed))
+                    .title("disk-tool")
+                    .inner_size(1280.0, 800.0)
+                    .resizable(true)
+                    .on_navigation(|url| allows_localhost(url))
+                    .build()
+                    .map_err(|e| format!("create main window: {e}"))?;
+
                 Ok::<(), String>(())
             })
             .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;

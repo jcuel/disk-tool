@@ -10,16 +10,6 @@
     "frontendDist": "../empty"
   },
   "app": {
-    "windows": [
-      {
-        "label": "main",
-        "title": "disk-tool",
-        "width": 1280,
-        "height": 800,
-        "resizable": true,
-        "url": "about:blank"
-      }
-    ],
     "security": {
       "csp": null
     }
