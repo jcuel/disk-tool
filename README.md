@@ -53,7 +53,36 @@ Product overview: [jcuel.github.io/disk-tool/](https://jcuel.github.io/disk-tool
 
 ## Download
 
-Pre-built binaries for Windows, Linux, and macOS are on the [Releases](https://github.com/jcuel/disk-tool/releases/latest) page. Download, extract, and run `disk-tool serve` (or `disk-tool.exe serve` on Windows).
+Pre-built **CLI binaries** for Windows, Linux, and macOS are on the [Releases](https://github.com/jcuel/disk-tool/releases/latest) page. Download, extract, and run `disk-tool serve` (or `disk-tool.exe serve` on Windows).
+
+**Desktop app (recommended):** install the platform bundle from the same Releases page:
+
+| Platform | Installer |
+|----------|-----------|
+| Windows | `.msi` or `.exe` (NSIS) |
+| macOS | `.dmg` |
+| Linux | `.AppImage` or `.deb` |
+
+Double-click **disk-tool** — no terminal or browser tab required. The desktop app runs the same Go server as `disk-tool serve --no-open` in a native window.
+
+Power users can still use the CLI binary for scripting (`disk-tool scan C:\Users --json`) or headless `disk-tool serve`.
+
+## Desktop development
+
+Requires [Rust stable](https://rustup.rs/), Node.js 22+, Go 1.25+, and platform Tauri dependencies ([Linux deps](https://v2.tauri.app/start/prerequisites/#linux)).
+
+```bash
+# Linux / macOS — full desktop build (web → embed → Go sidecar → Tauri bundle)
+make desktop
+
+# Sidecar smoke only
+make smoke-sidecar
+
+# Windows
+./build.ps1 -Desktop
+```
+
+Layout: [`desktop/`](desktop/) (Tauri shell) bundles [`bin/disk-tool`](cmd/disk-tool/) as an `externalBin` sidecar. The UI is embedded in Go only — Tauri navigates the webview to `http://127.0.0.1:<port>` after the sidecar emits `disk-tool-ready port=N`.
 
 ## Quick start
 
@@ -79,7 +108,7 @@ On Linux/macOS use `make build` if Make is available.
 
 | Command | Description |
 |---------|-------------|
-| `disk-tool serve [--port 8080]` | Local web UI on 127.0.0.1 |
+| `disk-tool serve [--port 8080] [--no-open] [--ready-stdout]` | Local web UI on 127.0.0.1 (`--port 0` = OS-assigned; `--ready-stdout` for desktop sidecar) |
 | `disk-tool scan <path> [--json]` | Scan without UI |
 | `disk-tool version` | Print version |
 
@@ -108,7 +137,8 @@ Pipeline: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 
 | Job | Environment | Checks |
 |-----|-------------|--------|
-| `test-linux` | ubuntu-latest | `go test`, govulncheck, build, [`scripts/smoke-api.sh`](scripts/smoke-api.sh) |
+| `test-linux` | ubuntu-latest | `go test`, govulncheck, build, API smoke, sidecar smoke |
+| `desktop-check` | ubuntu-latest | `cargo check` for Tauri shell + sidecar install |
 | `test-windows` | windows-latest | `build.ps1`, govulncheck, [`scripts/smoke-api.ps1`](scripts/smoke-api.ps1) |
 | `docker-smoke` | ubuntu + Docker | CLI scan + in-container API smoke |
 | `e2e-linux` | ubuntu-latest | [`scripts/e2e-run.sh`](scripts/e2e-run.sh) — Cypress browser tests |
