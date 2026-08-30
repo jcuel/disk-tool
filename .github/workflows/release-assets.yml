@@ -121,6 +121,7 @@ jobs:
             patchelf
 
       - name: Build web UI and embed
+        shell: bash
         run: |
           cd web && npm ci && npm run build
           rm -rf ../cmd/disk-tool/static/*
@@ -166,14 +167,18 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist/desktop
-          shopt -s globstar nullglob
-          for f in ${{ matrix.bundle_glob }}; do
-            cp "$f" dist/desktop/
-          done
-          if [ ! "$(ls -A dist/desktop)" ]; then
-            echo "No desktop bundle files matched: ${{ matrix.bundle_glob }}" >&2
+          mapfile -t bundle_files < <(find desktop/src-tauri/target -path '*/release/bundle/*' -type f 2>/dev/null)
+          if [ "${{ matrix.platform }}" = "macos-latest" ]; then
+            mapfile -t bundle_files < <(find desktop/src-tauri/target/aarch64-apple-darwin/release/bundle -type f 2>/dev/null)
+          fi
+          if [ ${#bundle_files[@]} -eq 0 ]; then
+            echo "No desktop bundle files found under target/release/bundle" >&2
+            find desktop/src-tauri/target -path '*/bundle/*' -type f 2>/dev/null || true
             exit 1
           fi
+          for f in "${bundle_files[@]}"; do
+            cp "$f" dist/desktop/
+          done
           ls -la dist/desktop
 
       - uses: actions/upload-artifact@v7
