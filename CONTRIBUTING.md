@@ -26,7 +26,7 @@ These policies are applied via [repository rulesets](https://github.com/jcuel/di
 | **`dev`** | Pull request required; CI must pass; no force-push; branch cannot be deleted |
 | **`master`** | Direct pushes blocked (admin bypass via PR only); pull request required; CI + branch-policy must pass; no force-push; branch cannot be deleted |
 
-Required CI checks: Linux/Windows unit smoke, Docker smoke, Cypress E2E, Trivy security scan.
+Required CI checks: Linux/Windows unit smoke, Docker smoke, Cypress E2E, Trivy security scan, ClamAV binary scan.
 
 Contributors opening a PR to `master` (other than maintainer `dev` → `master`) will fail the **Policy — master is maintainer-only** check.
 

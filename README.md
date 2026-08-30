@@ -63,6 +63,8 @@ Pre-built **CLI binaries** for Windows, Linux, and macOS are on the [Releases](h
 | macOS | `.dmg` |
 | Linux | `.AppImage` or `.deb` |
 
+> **Windows Defender / SmartScreen:** unsigned installers may trigger a false positive. Builds are ClamAV-scanned in CI before release. See [SECURITY.md](SECURITY.md#windows-defender--smartscreen-false-positives).
+
 Double-click **disk-tool** — no terminal or browser tab required. The desktop app runs the same Go server as `disk-tool serve --no-open` in a native window.
 
 Power users can still use the CLI binary for scripting (`disk-tool scan C:\Users --json`) or headless `disk-tool serve`.
@@ -143,6 +145,7 @@ Pipeline: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 | `docker-smoke` | ubuntu + Docker | CLI scan + in-container API smoke |
 | `e2e-linux` | ubuntu-latest | [`scripts/e2e-run.sh`](scripts/e2e-run.sh) — Cypress browser tests |
 | `security` | Trivy | Filesystem + container image (CRITICAL/HIGH); PR comment with scan tables |
+| `clamav` | ClamAV | Malware scan on Linux + Windows cross-compiled binaries |
 | `sync` | ubuntu-latest | Project board sync after merge ([`sync-project-board.yml`](.github/workflows/sync-project-board.yml)) |
 
 **Local smoke**
