@@ -105,6 +105,12 @@ fn kill_sidecar(app: &tauri::AppHandle) {
     }
 }
 
+fn log_startup_error(err: &str) {
+    eprintln!("{err}");
+    let log_path = std::env::temp_dir().join("disk-tool-startup.log");
+    let _ = std::fs::write(&log_path, err);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -130,7 +136,10 @@ pub fn run() {
 
                 Ok::<(), String>(())
             })
-            .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
+            .map_err(|e| {
+                log_startup_error(&e);
+                Box::<dyn std::error::Error>::from(e)
+            })?;
             Ok(())
         })
         .build(tauri::generate_context!())
