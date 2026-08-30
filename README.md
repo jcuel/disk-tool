@@ -53,21 +53,28 @@ Product overview: [jcuel.github.io/disk-tool/](https://jcuel.github.io/disk-tool
 
 ## Download
 
-Pre-built **CLI binaries** for Windows, Linux, and macOS are on the [Releases](https://github.com/jcuel/disk-tool/releases/latest) page. Download, extract, and run `disk-tool serve` (or `disk-tool.exe serve` on Windows).
+Pre-built artifacts are on the [Releases](https://github.com/jcuel/disk-tool/releases/latest) page.
 
-**Desktop app (recommended):** install the platform bundle from the same Releases page:
+| What you want | Windows | Linux | macOS |
+|---------------|---------|-------|-------|
+| **Desktop app** (double-click) | `*_x64-setup.exe` (NSIS) or `.msi` | `.AppImage` or `.deb` | `.dmg` |
+| **CLI** (terminal / scripts) | `disk-tool-windows-amd64.exe` | `disk-tool-linux-amd64` | `disk-tool-darwin-*` |
 
-| Platform | Installer |
-|----------|-----------|
-| Windows | `.msi` or `.exe` (NSIS) |
-| macOS | `.dmg` |
-| Linux | `.AppImage` or `.deb` |
+> Do **not** double-click `disk-tool-windows-amd64.exe` expecting the desktop UI — that file is the **CLI** build. It now starts `disk-tool serve` (browser + console) when launched with no args, but the **desktop installer** is the recommended experience.
+
+**Desktop app:** install from the NSIS/MSI (Windows), AppImage/deb (Linux), or dmg (macOS) on Releases.
+
+**CLI:** download the platform binary and run from a terminal:
+
+```bash
+disk-tool serve          # Linux/macOS
+disk-tool.exe serve      # Windows
+disk-tool scan C:\Users --json
+```
 
 > **Windows Defender / SmartScreen:** unsigned installers may trigger a false positive. Builds are ClamAV-scanned in CI before release. See [SECURITY.md](SECURITY.md#windows-defender--smartscreen-false-positives).
 
-Double-click **disk-tool** — no terminal or browser tab required. The desktop app runs the same Go server as `disk-tool serve --no-open` in a native window.
-
-Power users can still use the CLI binary for scripting (`disk-tool scan C:\Users --json`) or headless `disk-tool serve`.
+The desktop app runs the same Go server as `disk-tool serve --no-open` in a native window — no separate browser tab.
 
 ## Desktop development
 

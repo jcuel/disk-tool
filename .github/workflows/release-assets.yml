@@ -167,9 +167,11 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist/desktop
-          mapfile -t bundle_files < <(find desktop/src-tauri/target -path '*/release/bundle/*' -type f 2>/dev/null)
+          bundle_files=()
           if [ "${{ matrix.platform }}" = "macos-latest" ]; then
-            mapfile -t bundle_files < <(find desktop/src-tauri/target/aarch64-apple-darwin/release/bundle -type f 2>/dev/null)
+            while IFS= read -r f; do bundle_files+=("$f"); done < <(find desktop/src-tauri/target/aarch64-apple-darwin/release/bundle -type f 2>/dev/null)
+          else
+            while IFS= read -r f; do bundle_files+=("$f"); done < <(find desktop/src-tauri/target -path '*/release/bundle/*' -type f 2>/dev/null)
           fi
           if [ ${#bundle_files[@]} -eq 0 ]; then
             echo "No desktop bundle files found under target/release/bundle" >&2
@@ -257,8 +259,12 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: disk-tool ${{ github.ref_name }}
-          body: Desktop installers and CLI binaries for ${{ github.ref_name }}.
-          draft: true
+          body: |
+            Desktop installers (recommended) and CLI binaries.
+
+            **Windows:** install `disk-tool_*_x64-setup.exe` (NSIS) or `.msi` — do not double-click `disk-tool-windows-amd64.exe` (CLI only; run `disk-tool.exe serve` from a terminal).
+            **Linux/macOS:** use `.AppImage`/`.deb`/`.dmg` for the desktop app; extensionless files are CLI builds.
+          draft: false
           files: artifacts/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

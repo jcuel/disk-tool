@@ -26,6 +26,12 @@ const readyPrefix = "disk-tool-ready port="
 
 func main() {
 	if len(os.Args) < 2 {
+		// Windows users often double-click the CLI binary from Releases; start the server
+		// instead of flashing a console with usage text and exiting.
+		if runtime.GOOS == "windows" {
+			runServe(nil)
+			return
+		}
 		printUsage()
 		os.Exit(1)
 	}
@@ -35,7 +41,7 @@ func main() {
 	case "scan":
 		runScan(os.Args[2:])
 	case "version":
-		fmt.Println("disk-tool 1.4.0")
+		fmt.Println("disk-tool 1.5.0")
 	default:
 		printUsage()
 		os.Exit(1)
