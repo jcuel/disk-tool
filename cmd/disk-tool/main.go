@@ -41,7 +41,7 @@ func main() {
 	case "scan":
 		runScan(os.Args[2:])
 	case "version":
-		fmt.Println("disk-tool 1.5.0")
+		fmt.Println("disk-tool 1.5.1")
 	default:
 		printUsage()
 		os.Exit(1)
