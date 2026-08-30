@@ -20,7 +20,12 @@ if [ ! -d "$SEARCH_ROOT" ]; then
   exit 1
 fi
 
-mapfile -d '' installers < <(
+count=0
+while IFS= read -r -d '' f; do
+  cp "$f" "$DEST/"
+  echo "Packaged: $(basename "$f")"
+  count=$((count + 1))
+done < <(
   find "$SEARCH_ROOT" -type f \( \
     -name '*.AppImage' -o \
     -name '*.deb' -o \
@@ -31,15 +36,10 @@ mapfile -d '' installers < <(
   \) -print0
 )
 
-if [ ${#installers[@]} -eq 0 ]; then
+if [ "$count" -eq 0 ]; then
   echo "No desktop installers found under $SEARCH_ROOT" >&2
   find "$SEARCH_ROOT" -type f 2>/dev/null | head -20
   exit 1
 fi
-
-for f in "${installers[@]}"; do
-  cp "$f" "$DEST/"
-  echo "Packaged: $(basename "$f")"
-done
 
 ls -la "$DEST"
