@@ -1,7 +1,6 @@
 import {
   cancelScan,
   connectEvents,
-  deletePath,
   dockerPrune,
   expandScan,
   fetchDisk,
@@ -60,6 +59,7 @@ app.innerHTML = `
     <div class="progress-bar"><div id="progress-fill"></div></div>
     <span id="progress-text"></span>
   </div>
+  <div id="status-banner" class="status-banner hidden" role="status"></div>
 </section>
 <section class="disk-summary panel" id="disk-summary">
   <div class="disk-summary-text">
@@ -155,6 +155,7 @@ const copyTicket = document.getElementById("copy-ticket") as HTMLButtonElement;
 const progressEl = document.getElementById("progress")!;
 const progressFill = document.getElementById("progress-fill")!;
 const progressText = document.getElementById("progress-text")!;
+const statusBanner = document.getElementById("status-banner")!;
 const diskVolume = document.getElementById("disk-volume")!;
 const diskCapacity = document.getElementById("disk-capacity")!;
 const diskUsed = document.getElementById("disk-used")!;
@@ -184,6 +185,33 @@ const minSizeMbInput = document.getElementById("min-size-mb") as HTMLInputElemen
 const reanalyzeBtn = document.getElementById("reanalyze-btn") as HTMLButtonElement;
 const duplicatesBtn = document.getElementById("duplicates-btn") as HTMLButtonElement;
 const duplicatesPanel = document.getElementById("duplicates-panel")!;
+
+let overviewAppliedForScan: string | null = null;
+
+function showStatusBanner(message: string, kind: "success" | "warning" = "success") {
+  statusBanner.textContent = message;
+  statusBanner.className = `status-banner ${kind}`;
+  statusBanner.classList.remove("hidden");
+}
+
+function hideStatusBanner() {
+  statusBanner.classList.add("hidden");
+}
+
+function handleDeleteReport(report: CleanupReport, label: string) {
+  const deleted = report.results.filter((r) => r.status === "deleted");
+  if (deleted.length === 0) {
+    const reason = report.results[0]?.reason || report.results[0]?.status || "unknown";
+    alert(`Delete blocked: ${reason}`);
+    return;
+  }
+  const bytes = deleted.reduce((n, r) => n + r.size, 0);
+  const names = deleted.length === 1 ? label : `${deleted.length} items`;
+  showStatusBanner(
+    `Deleted ${names} (${formatBytes(bytes)}). Folder totals update as you drill down; re-scan for a full refresh.`,
+    "success"
+  );
+}
 
 let modalBusy = false;
 
@@ -921,11 +949,7 @@ function showFileDeleteConfirm(path: string, size: number, label: string) {
           pendingDryRun = null;
           closeModal();
           await refreshJob();
-          const deleted = report.results.filter((r) => r.status === "deleted").length;
-          if (deleted === 0) {
-            const reason = report.results[0]?.reason || report.results[0]?.status || "unknown";
-            alert(`Delete blocked: ${reason}`);
-          }
+          handleDeleteReport(report, label);
         } catch (e) {
           alert(String(e));
           showFileDeleteConfirm(path, size, label);
@@ -1012,7 +1036,16 @@ function showConfirmModal(items: { path: string; size: number; category: string 
           }
           closeModal();
           await refreshJob();
-          alert(`Cleanup complete. Reclaimed ${formatBytes(report.bytesReclaimed)}.`);
+          const deleted = report.results.filter((r) => r.status === "deleted");
+          if (deleted.length === 0) {
+            const reason = report.results[0]?.reason || report.results[0]?.status || "unknown";
+            alert(`Cleanup blocked: ${reason}`);
+          } else {
+            showStatusBanner(
+              `Deleted ${deleted.length} item(s) — reclaimed ${formatBytes(report.bytesReclaimed)}. Re-scan for updated folder totals.`,
+              "success"
+            );
+          }
         } catch (e) {
           alert(String(e));
           showConfirmModal(items);
@@ -1095,6 +1128,8 @@ startBtn.onclick = async () => {
 };
 
 async function applyOverviewCompleted() {
+  if (!scanId || overviewAppliedForScan === scanId) return;
+  overviewAppliedForScan = scanId;
   scanning = false;
   startBtn.disabled = false;
   cancelBtn.disabled = true;
@@ -1122,6 +1157,8 @@ async function beginScan(root: string) {
   copyTicket.disabled = true;
   job = null;
   selectedPath = null;
+  overviewAppliedForScan = null;
+  hideStatusBanner();
   renderUI();
   try {
     scanId = await startScan(root);

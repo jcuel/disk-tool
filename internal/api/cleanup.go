@@ -81,6 +81,7 @@ func RunCleanup(job *model.ScanJob, req model.CleanupRequest) (*model.CleanupRep
 			report.Results = append(report.Results, result)
 			continue
 		}
+		result.Path = abs
 		if abs == rootAbs {
 			result.Status = model.CleanupStatusSkippedScanRoot
 			result.Reason = "cannot delete scan root"
@@ -148,6 +149,9 @@ func RunCleanup(job *model.ScanJob, req model.CleanupRequest) (*model.CleanupRep
 
 	report.FinishedAt = time.Now().UTC()
 	report.ReportText = model.BuildCleanupReportText(report)
+	if !req.DryRun {
+		applyPostDeleteUpdates(job, report)
+	}
 	return report, nil
 }
 
@@ -225,23 +229,58 @@ func dirSize(path string) int64 {
 	return total
 }
 
-func pruneDeletedCandidates(job *model.ScanJob, report *model.CleanupReport) {
-	if job == nil || job.Insights == nil || report == nil {
-		return
-	}
+func deletedPaths(report *model.CleanupReport) map[string]struct{} {
 	deleted := make(map[string]struct{})
+	if report == nil {
+		return deleted
+	}
 	for _, r := range report.Results {
 		if r.Status == model.CleanupStatusDeleted {
 			deleted[filepath.Clean(r.Path)] = struct{}{}
 		}
 	}
+	return deleted
+}
+
+func pathUnderDeleted(path string, deleted map[string]struct{}) bool {
 	if len(deleted) == 0 {
+		return false
+	}
+	clean := filepath.Clean(path)
+	if _, ok := deleted[clean]; ok {
+		return true
+	}
+	for d := range deleted {
+		if strings.HasPrefix(clean, d+string(os.PathSeparator)) {
+			return true
+		}
+	}
+	return false
+}
+
+// applyPostDeleteUpdates removes deleted paths from in-memory scan snapshots.
+func applyPostDeleteUpdates(job *model.ScanJob, report *model.CleanupReport) {
+	if job == nil || report == nil {
+		return
+	}
+	deleted := deletedPaths(report)
+	if len(deleted) == 0 {
+		return
+	}
+	pruneDeletedCandidates(job, deleted)
+	pruneDeletedLargestFiles(job, deleted)
+	pruneDeletedTree(job, deleted)
+	pruneDeletedDuplicates(job, deleted)
+}
+
+func pruneDeletedCandidates(job *model.ScanJob, deleted map[string]struct{}) {
+	if job == nil || job.Insights == nil || len(deleted) == 0 {
 		return
 	}
 	kept := make([]model.CleanupCandidate, 0, len(job.Insights.CleanupCandidates))
 	var reclaim int64
 	for _, c := range job.Insights.CleanupCandidates {
-		if _, ok := deleted[c.Path]; ok {
+		if pathUnderDeleted(c.Path, deleted) {
 			continue
 		}
 		kept = append(kept, c)
@@ -249,4 +288,88 @@ func pruneDeletedCandidates(job *model.ScanJob, report *model.CleanupReport) {
 	}
 	job.Insights.CleanupCandidates = kept
 	job.Insights.TotalReclaimable = reclaim
+}
+
+func pruneDeletedLargestFiles(job *model.ScanJob, deleted map[string]struct{}) {
+	if job == nil || len(deleted) == 0 {
+		return
+	}
+	kept := make([]model.FileEntry, 0, len(job.LargestFiles))
+	for _, f := range job.LargestFiles {
+		if pathUnderDeleted(f.Path, deleted) {
+			continue
+		}
+		kept = append(kept, f)
+	}
+	job.LargestFiles = kept
+}
+
+func pruneDeletedTree(job *model.ScanJob, deleted map[string]struct{}) {
+	if job == nil || job.Tree == nil || len(deleted) == 0 {
+		return
+	}
+	pruneTreeChildren(job.Tree, deleted)
+	recomputeTreeSizes(job.Tree)
+}
+
+func pruneTreeChildren(node *model.ScanNode, deleted map[string]struct{}) {
+	if node == nil {
+		return
+	}
+	kept := node.Children[:0]
+	for _, c := range node.Children {
+		if pathUnderDeleted(c.Path, deleted) {
+			continue
+		}
+		pruneTreeChildren(c, deleted)
+		kept = append(kept, c)
+	}
+	node.Children = kept
+}
+
+func recomputeTreeSizes(node *model.ScanNode) int64 {
+	if node == nil {
+		return 0
+	}
+	for _, c := range node.Children {
+		recomputeTreeSizes(c)
+	}
+	if len(node.Children) == 0 {
+		if node.IsDir {
+			node.Size = 0
+			node.FileCount = 0
+		}
+		return node.Size
+	}
+	var size int64
+	var files int64
+	for _, c := range node.Children {
+		size += c.Size
+		files += c.FileCount
+	}
+	node.Size = size
+	node.FileCount = files
+	return size
+}
+
+func pruneDeletedDuplicates(job *model.ScanJob, deleted map[string]struct{}) {
+	if job == nil || len(deleted) == 0 || len(job.DuplicateGroups) == 0 {
+		return
+	}
+	kept := make([]model.DuplicateGroup, 0, len(job.DuplicateGroups))
+	for _, g := range job.DuplicateGroups {
+		files := make([]model.FileEntry, 0, len(g.Files))
+		for _, f := range g.Files {
+			if pathUnderDeleted(f.Path, deleted) {
+				continue
+			}
+			files = append(files, f)
+		}
+		if len(files) < 2 {
+			continue
+		}
+		g.Files = files
+		kept = append(kept, g)
+	}
+	job.DuplicateGroups = kept
 }
