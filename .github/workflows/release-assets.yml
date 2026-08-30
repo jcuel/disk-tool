@@ -189,6 +189,7 @@ jobs:
   clamav-scan:
     name: Security — ClamAV release artifacts
     needs: [build, build-desktop]
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -232,6 +233,7 @@ jobs:
   publish-release:
     name: Publish GitHub Release
     needs: [build, build-desktop, clamav-scan]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.clamav-scan.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

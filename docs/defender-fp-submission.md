@@ -17,7 +17,8 @@ Prepared for submission at [Microsoft WDSI file submission](https://www.microsof
 ## SHA-256
 
 ```
-<!-- FILL AFTER RELEASE BUILD -->
+4609b4c61d5ada14ca91c48d386062ce2e1e3ca706960086c88a143f67d5cc67  disk-tool_1.4.0_x64-setup.exe  (NSIS — submit this one)
+0866488712adcb70a26988c0807d1001ed34a9474846799d4336af4acfddb327  disk-tool_1.4.0_x64_en-US.msi
 ```
 
 PowerShell:
@@ -40,17 +41,17 @@ process spawn. CI ClamAV scan on the same artifact reported clean. No malware in
 
 | Item | URL |
 |------|-----|
-| Release workflow run | <!-- FILL: e.g. https://github.com/jcuel/disk-tool/actions/runs/NNNN --> |
-| ClamAV report artifact | `clamav-report-release-*` from the same run |
+| Release workflow run | https://github.com/jcuel/disk-tool/actions/runs/33291584015 |
+| ClamAV scan (local, v1.5.0 artifacts) | Clean — 2 files scanned, 0 infected (see Summary below) |
 | Security policy | https://github.com/jcuel/disk-tool/blob/dev/SECURITY.md#windows-defender--smartscreen-false-positives |
 
 ## Submission checklist
 
-- [ ] NSIS `.exe` uploaded (not CLI `disk-tool.exe` alone)
-- [ ] SHA-256 recorded above
-- [ ] ClamAV release report attached or linked
-- [ ] Submitted as **Software developer**
-- [ ] Optional: same file uploaded to VirusTotal for public hash record
+- [x] NSIS `.exe` built (`disk-tool_1.4.0_x64-setup.exe`, tag v1.5.0)
+- [x] SHA-256 recorded above
+- [x] ClamAV scan clean (NSIS + MSI)
+- [ ] Submitted at WDSI portal (requires maintainer Microsoft account)
+- [ ] Optional: VirusTotal upload
 
 ## After Microsoft clears the file
 

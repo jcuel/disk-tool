@@ -1,0 +1,7 @@
+=== /tmp/release-artifacts/disk-tool_1.4.0_x64-setup.exe ===
+/tmp/release-artifacts/disk-tool_1.4.0_x64-setup.exe: OK
+
+=== /tmp/release-artifacts/disk-tool_1.4.0_x64_en-US.msi ===
+/tmp/release-artifacts/disk-tool_1.4.0_x64_en-US.msi: OK
+
+Summary: scanned=2 infected=0
