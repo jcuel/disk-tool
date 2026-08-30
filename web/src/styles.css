@@ -118,6 +118,10 @@ button:disabled {
   margin-top: 0.75rem;
 }
 
+.hidden {
+  display: none !important;
+}
+
 .progress.hidden {
   display: none;
 }
@@ -225,6 +229,25 @@ button:disabled {
   border-left: 3px solid #d29922;
   background: rgba(210, 153, 34, 0.1);
   font-size: 0.85rem;
+}
+
+.status-banner {
+  margin-top: 0.75rem;
+  padding: 0.65rem 1rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.status-banner.success {
+  background: rgba(35, 134, 54, 0.15);
+  border: 1px solid var(--accent);
+  color: var(--text);
+}
+
+.status-banner.warning {
+  background: rgba(210, 153, 34, 0.12);
+  border: 1px solid #d29922;
+  color: var(--text);
 }
 
 .safety-grid, .maintenance-presets, .duplicates-panel, .age-controls {

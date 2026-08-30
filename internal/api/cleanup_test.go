@@ -109,9 +109,72 @@ func TestRunCleanup_executeDeletes(t *testing.T) {
 	if _, err := os.Stat(target); !os.IsNotExist(err) {
 		t.Fatal("target should be deleted")
 	}
-	pruneDeletedCandidates(job, report)
 	if len(job.Insights.CleanupCandidates) != 0 {
 		t.Fatal("expected candidates pruned")
+	}
+}
+
+func TestApplyPostDeleteUpdates_prunesLargestFilesAndTree(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "subdir")
+	target := filepath.Join(sub, "big.bin")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte("0123456789"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	child := &model.ScanNode{
+		Name: "big.bin", Path: target, Size: 10, FileCount: 1, IsDir: false, Scanned: true,
+	}
+	subNode := &model.ScanNode{
+		Name: "subdir", Path: sub, Size: 10, FileCount: 1, IsDir: true, Scanned: true,
+		Children: []*model.ScanNode{child},
+	}
+	root := &model.ScanNode{
+		Name: filepath.Base(dir), Path: dir, Size: 10, FileCount: 1, IsDir: true, Scanned: true,
+		Children: []*model.ScanNode{subNode},
+	}
+
+	job := &model.ScanJob{
+		Root: dir,
+		Tree: root,
+		LargestFiles: []model.FileEntry{
+			{Path: target, Name: "big.bin", Size: 10},
+			{Path: filepath.Join(dir, "other.txt"), Name: "other.txt", Size: 1},
+		},
+		Insights: &model.InsightsReport{
+			CleanupCandidates: []model.CleanupCandidate{
+				{Category: model.CategoryPackageCache, Path: target, Size: 10},
+			},
+			TotalReclaimable: 10,
+		},
+	}
+
+	report, err := RunCleanup(job, model.CleanupRequest{
+		Paths:         []string{target},
+		DryRun:        false,
+		Confirm:       true,
+		ConfirmPhrase: "DELETE",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Results[0].Status != model.CleanupStatusDeleted {
+		t.Fatalf("expected deleted, got %s", report.Results[0].Status)
+	}
+	if _, err := os.Stat(target); !os.IsNotExist(err) {
+		t.Fatal("file should be gone on disk (Bucket B check)")
+	}
+	if len(job.LargestFiles) != 1 || job.LargestFiles[0].Name != "other.txt" {
+		t.Fatalf("largest files not pruned: %+v", job.LargestFiles)
+	}
+	if len(subNode.Children) != 0 {
+		t.Fatal("tree child should be removed")
+	}
+	if subNode.Size != 0 {
+		t.Fatalf("parent size should recompute to 0, got %d", subNode.Size)
 	}
 }
 

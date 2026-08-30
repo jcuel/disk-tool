@@ -307,9 +307,6 @@ func (s *Server) handleCleanup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	job.LastCleanupReport = report
-	if !req.DryRun {
-		pruneDeletedCandidates(job, report)
-	}
 	writeJSON(w, http.StatusOK, report)
 }
 

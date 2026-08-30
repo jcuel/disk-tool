@@ -27,6 +27,7 @@ export function initCharts(treemapEl: HTMLElement, barEl: HTMLElement, diskPieEl
 export function renderDiskPie(free: number, used: number) {
   if (!diskPieChart) return;
   diskPieChart.setOption({
+    animation: false,
     tooltip: {
       trigger: "item",
       formatter: (p: { name: string; value: number; percent: number }) =>
@@ -139,6 +140,7 @@ export function renderCharts(
 
   treemapChart.setOption(
     {
+      animation: false,
       tooltip: {
         formatter: (p: { name: string; value: number }) =>
           `${p.name}<br/>${formatBytes(p.value)}`,
@@ -161,6 +163,7 @@ export function renderCharts(
 
   barChart.setOption(
     {
+      animation: false,
       tooltip: {
         trigger: "item",
         formatter: (p: { name: string; value: number }) =>
