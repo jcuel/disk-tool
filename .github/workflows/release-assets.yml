@@ -166,22 +166,13 @@ jobs:
       - name: Package desktop bundle
         shell: bash
         run: |
-          mkdir -p dist/desktop
-          bundle_files=()
+          platform=linux
           if [ "${{ matrix.platform }}" = "macos-latest" ]; then
-            while IFS= read -r f; do bundle_files+=("$f"); done < <(find desktop/src-tauri/target/aarch64-apple-darwin/release/bundle -type f 2>/dev/null)
-          else
-            while IFS= read -r f; do bundle_files+=("$f"); done < <(find desktop/src-tauri/target -path '*/release/bundle/*' -type f 2>/dev/null)
+            platform=macos
+          elif [ "${{ matrix.platform }}" = "windows-latest" ]; then
+            platform=windows
           fi
-          if [ ${#bundle_files[@]} -eq 0 ]; then
-            echo "No desktop bundle files found under target/release/bundle" >&2
-            find desktop/src-tauri/target -path '*/bundle/*' -type f 2>/dev/null || true
-            exit 1
-          fi
-          for f in "${bundle_files[@]}"; do
-            cp "$f" dist/desktop/
-          done
-          ls -la dist/desktop
+          bash scripts/package-desktop-bundle.sh dist/desktop "$platform"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -221,7 +212,9 @@ jobs:
       - name: Scan release artifacts
         env:
           CLAMAV_REPORT: clamav-report.txt
-        run: bash scripts/clamav-scan.sh artifacts/
+        run: |
+          bash scripts/collect-release-assets.sh artifacts release-scan
+          bash scripts/clamav-scan.sh release-scan/
 
       - name: Upload ClamAV report
         if: always()
@@ -252,8 +245,11 @@ jobs:
           pattern: desktop-*
           merge-multiple: true
 
+      - name: Collect release assets
+        run: bash scripts/collect-release-assets.sh artifacts release
+
       - name: List release files
-        run: find artifacts -type f
+        run: find release -type f -exec ls -lh {} \;
 
       - uses: softprops/action-gh-release@v3
         with:
@@ -262,9 +258,14 @@ jobs:
           body: |
             Desktop installers (recommended) and CLI binaries.
 
-            **Windows:** install `disk-tool_*_x64-setup.exe` (NSIS) or `.msi` — do not double-click `disk-tool-windows-amd64.exe` (CLI only; run `disk-tool.exe serve` from a terminal).
-            **Linux/macOS:** use `.AppImage`/`.deb`/`.dmg` for the desktop app; extensionless files are CLI builds.
+            | Platform | Desktop (recommended) | CLI |
+            |----------|----------------------|-----|
+            | Windows | `*_x64-setup.exe` or `.msi` | `disk-tool-windows-amd64.exe` |
+            | Linux | `.AppImage` or `.deb` | `disk-tool-linux-amd64` |
+            | macOS | `.dmg` | `disk-tool-darwin-arm64` / `disk-tool-darwin-amd64` |
+
+            **Windows:** do not double-click the CLI `.exe` expecting the desktop UI — use the NSIS/MSI installer.
           draft: false
-          files: artifacts/**/*
+          files: release/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
