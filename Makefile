@@ -1,4 +1,4 @@
-.PHONY: build web test smoke smoke-api smoke-docker
+.PHONY: build web test smoke smoke-api smoke-docker desktop desktop-sidecar smoke-sidecar
 
 build: web
 	rm -rf cmd/disk-tool/static/*
@@ -19,3 +19,12 @@ smoke-api:
 
 smoke-docker:
 	bash scripts/smoke-docker.sh
+
+desktop-sidecar: build
+	bash scripts/build-desktop-sidecar.sh bin/disk-tool
+
+smoke-sidecar: build
+	bash scripts/smoke-sidecar.sh ./bin/disk-tool
+
+desktop:
+	bash scripts/build-desktop.sh
