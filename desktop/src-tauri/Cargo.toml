@@ -1,6 +1,6 @@
 [package]
 name = "disk-tool-desktop"
-version = "1.5.1"
+version = "1.6.0"
 description = "disk-tool desktop shell"
 authors = ["jcuel"]
 edition = "2021"

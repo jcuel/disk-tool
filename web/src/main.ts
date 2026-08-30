@@ -1,12 +1,16 @@
 import {
   cancelScan,
+  compactWSLDisk,
   connectEvents,
   dockerPrune,
+  emptyRecycleBin,
   expandScan,
   fetchDisk,
   fetchDockerStatus,
   fetchMaintenancePresets,
+  fetchRecycleBin,
   fetchRoots,
+  fetchWSLDisks,
   findDuplicates,
   findNode,
   formatBytes,
@@ -24,7 +28,8 @@ import {
   type ScanNode,
 } from "./api";
 import { exportScanClient } from "./export-client";
-import { initCharts, pct, renderCharts, renderDiskPie } from "./charts";
+import { initCharts, pct, renderCharts, renderDiskPie, resizeCharts } from "./charts";
+import { initDesktopTabs } from "./desktop-tabs";
 import "./styles.css";
 
 const app = document.getElementById("app")!;
@@ -74,7 +79,7 @@ app.innerHTML = `
   <div id="disk-pie" class="chart disk-pie-chart"></div>
 </section>
 <main class="layout">
-  <section class="panel tree-panel">
+  <section class="panel tree-panel" data-desktop-tab="browse">
     <h2>Folder tree</h2>
     <div id="breadcrumb"></div>
     <table id="tree-table">
@@ -82,14 +87,15 @@ app.innerHTML = `
       <tbody></tbody>
     </table>
   </section>
-  <section class="panel charts-panel">
+  <section class="panel charts-panel" data-desktop-tab="browse">
     <h2>Distribution</h2>
     <p id="charts-hint" class="hint charts-hint hidden">Treemap and bar chart appear after the overview scan completes. Click a segment to drill into that folder.</p>
     <div id="treemap" class="chart"></div>
     <div id="barchart" class="chart"></div>
   </section>
-  <section class="panel insights-panel">
+  <section class="panel insights-panel" data-desktop-tab="insights">
     <h2>Insights</h2>
+    <div id="maintenance-hub" class="maintenance-hub hidden"></div>
     <p id="insights-summary" class="hint">Run an overview scan to see where space is used.</p>
     <h3>Cleanup candidates</h3>
     <p class="hint">Leftover project deps, caches, and downloads — review before deleting</p>
@@ -115,7 +121,7 @@ app.innerHTML = `
       <tbody></tbody>
     </table>
   </section>
-  <section class="panel files-panel">
+  <section class="panel files-panel" data-desktop-tab="files">
     <h2>Largest files</h2>
     <p class="hint">Updated as you drill into folders</p>
     <table id="files-table">
@@ -185,6 +191,9 @@ const minSizeMbInput = document.getElementById("min-size-mb") as HTMLInputElemen
 const reanalyzeBtn = document.getElementById("reanalyze-btn") as HTMLButtonElement;
 const duplicatesBtn = document.getElementById("duplicates-btn") as HTMLButtonElement;
 const duplicatesPanel = document.getElementById("duplicates-panel")!;
+const maintenanceHubEl = document.getElementById("maintenance-hub")!;
+
+initDesktopTabs();
 
 let overviewAppliedForScan: string | null = null;
 
@@ -474,6 +483,7 @@ function renderInsights() {
     cleanupToolbar.classList.add("hidden");
     cleanupReportPanel.classList.add("hidden");
     safetyGridEl.classList.add("hidden");
+    maintenanceHubEl.classList.add("hidden");
     maintenancePresetsEl.classList.add("hidden");
     ageControls.classList.add("hidden");
     driveRootBanner.classList.add("hidden");
@@ -491,11 +501,12 @@ function renderInsights() {
   if (ins.safetyGrid?.driveRoot) {
     driveRootBanner.classList.remove("hidden");
     driveRootBanner.textContent =
-      "Scanning a full drive includes protected OS areas. Prefer your user profile (/home or Users) for cleanup. Protected zones cannot be deleted.";
+      "Full-drive scan includes protected OS areas. Use the Maintenance actions below for temp, recycle bin, and Docker — do not delete critical OS paths directly.";
   } else {
     driveRootBanner.classList.add("hidden");
   }
 
+  renderMaintenanceHub(ins);
   renderSafetyGrid(ins);
   void renderMaintenancePresets();
   renderDuplicatesPanel();
@@ -553,6 +564,32 @@ function renderInsights() {
   renderCleanupReport();
 }
 
+function zoneLabel(zone: string): string {
+  const labels: Record<string, string> = {
+    forbidden: "Forbidden",
+    critical_os: "Critical OS",
+    diagnostic: "Diagnostic",
+    maintenance: "Maintenance",
+    review: "Review",
+    caution: "Caution",
+    normal: "Normal",
+  };
+  return labels[zone] || zone;
+}
+
+function zoneGuidance(zone: string): string {
+  const tips: Record<string, string> = {
+    forbidden: "System paths — not scanned or deletable.",
+    critical_os: "Use OS storage tools (Settings → Storage, cleanmgr) — not file delete here.",
+    diagnostic: "Crash dumps — clear via OS diagnostic settings if needed.",
+    maintenance: "Use Temp cleanup maintenance action.",
+    review: "Regenerable project files — Dev reclaim preset.",
+    caution: "Review carefully before deleting.",
+    normal: "Standard user files.",
+  };
+  return tips[zone] || "";
+}
+
 function renderSafetyGrid(ins: NonNullable<ScanJob["insights"]>) {
   const grid = ins.safetyGrid;
   if (!grid || Object.keys(grid.zones).length === 0) {
@@ -560,16 +597,20 @@ function renderSafetyGrid(ins: NonNullable<ScanJob["insights"]>) {
     return;
   }
   safetyGridEl.classList.remove("hidden");
+  const protectedNote =
+    grid.protectedBytes > 0
+      ? `<p class="hint">${formatBytes(grid.protectedBytes)} in protected areas — use Maintenance actions, not file delete.</p>`
+      : "";
   const cells = Object.entries(grid.zones)
     .map(
       ([zone, st]) =>
-        `<button type="button" class="safety-cell zone-${escapeHtml(zone)}" data-zone="${escapeHtml(zone)}">
-          <strong>${escapeHtml(zone)}</strong>
+        `<button type="button" class="safety-cell zone-${escapeHtml(zone)}" data-zone="${escapeHtml(zone)}" title="${escapeHtml(zoneGuidance(zone))}">
+          <strong>${escapeHtml(zoneLabel(zone))}</strong>
           <span>${st.count} item(s) · ${formatBytes(st.bytes)}</span>
         </button>`
     )
     .join("");
-  safetyGridEl.innerHTML = `<h3>Safety grid</h3><p class="hint">Click a zone to filter cleanup candidates</p><div class="safety-cells">${cells}</div>`;
+  safetyGridEl.innerHTML = `<h3>Safety zones</h3>${protectedNote}<p class="hint">Click a zone to filter cleanup candidates</p><div class="safety-cells">${cells}</div>`;
   safetyGridEl.querySelectorAll(".safety-cell").forEach((btn) => {
     btn.addEventListener("click", () => {
       const zone = (btn as HTMLElement).dataset.zone;
@@ -580,6 +621,208 @@ function renderSafetyGrid(ins: NonNullable<ScanJob["insights"]>) {
       renderInsights();
     });
   });
+}
+
+async function renderMaintenanceHub(ins: NonNullable<ScanJob["insights"]>) {
+  maintenanceHubEl.classList.remove("hidden");
+  let recycleBytes = 0;
+  let recycleCount = 0;
+  let recycleOk = true;
+  if (!isDemoMode) {
+    try {
+      const bin = await fetchRecycleBin();
+      recycleOk = bin.supported;
+      recycleBytes = bin.totalBytes;
+      recycleCount = bin.itemCount;
+    } catch {
+      recycleOk = false;
+    }
+  }
+  let wslCard = "";
+  if (!isDemoMode) {
+    try {
+      const wslData = await fetchWSLDisks();
+      if (wslData.supported && wslData.disks.length > 0) {
+        const total = wslData.disks.reduce((n, d) => n + d.sizeBytes, 0);
+        wslCard = `
+          <div class="maint-card">
+            <h4>Compact WSL / Docker disk</h4>
+            <p>${wslData.disks.length} VHDX file(s) · ${formatBytes(total)} on disk. Shuts down WSL then compacts — frees host space.</p>
+            <button type="button" class="secondary-btn" id="hub-wsl-btn">Compact disk…</button>
+          </div>`;
+      }
+    } catch {
+      /* optional on non-Windows */
+    }
+  }
+  maintenanceHubEl.innerHTML = `
+    <h3>Maintenance</h3>
+    <p class="hint">OS-level cleanup — safer than deleting protected scan paths.</p>
+    <div class="maint-cards">
+      <div class="maint-card">
+        <h4>Temp cleanup</h4>
+        <p>User temp folders (maintenance zone).</p>
+        <button type="button" class="secondary-btn" data-preset="temp-cleanup">Run temp cleanup…</button>
+      </div>
+      <div class="maint-card">
+        <h4>Empty recycle bin</h4>
+        <p>${recycleOk ? `${recycleCount} item(s) · ${formatBytes(recycleBytes)}` : "Unavailable on this system"}</p>
+        <button type="button" class="secondary-btn" id="hub-recycle-btn" ${recycleOk ? "" : "disabled"}>Empty recycle bin…</button>
+      </div>
+      <div class="maint-card">
+        <h4>Docker reclaim</h4>
+        <p>Prune unused images/containers/cache (volumes kept). Does not shrink VHDX on Windows.</p>
+        <button type="button" class="secondary-btn" id="hub-docker-btn">Docker reclaim…</button>
+      </div>
+      <div class="maint-card maint-card-readonly">
+        <h4>Critical OS</h4>
+        <p>Windows, Program Files, and system paths — use Settings → Storage or Disk Cleanup (<code>cleanmgr</code>), not disk-tool delete.</p>
+      </div>
+      ${wslCard}
+    </div>`;
+  maintenanceHubEl.querySelector("#hub-docker-btn")?.addEventListener("click", () => void startDockerReclaimFlow());
+  maintenanceHubEl.querySelector("#hub-recycle-btn")?.addEventListener("click", () => void startEmptyRecycleBin());
+  maintenanceHubEl.querySelector("#hub-wsl-btn")?.addEventListener("click", () => void startWSLCompact());
+  maintenanceHubEl.querySelector('[data-preset="temp-cleanup"]')?.addEventListener("click", async () => {
+    if (!scanId) return;
+    const data = await fetchMaintenancePresets(scanId);
+    const match = data.matches.find((m: MaintenancePresetMatch) => m.id === "temp-cleanup");
+    if (match) applyPreset(match);
+    else alert("No temp folders matched — try scanning your user profile.");
+  });
+}
+
+async function refreshInsightsAfterMaintenance() {
+  if (!scanId || !job) return;
+  const cfg = {
+    ageThresholdDays: parseInt(ageDaysInput.value, 10) || 90,
+    minSizeBytes: (parseInt(minSizeMbInput.value, 10) || 50) * 1024 * 1024,
+  };
+  job.insights = await reanalyzeInsights(scanId, cfg);
+  await refreshJob();
+}
+
+async function startEmptyRecycleBin() {
+  if (isDemoMode) {
+    alert("Demo mode — install disk-tool to empty recycle bin.");
+    return;
+  }
+  try {
+    const bin = await fetchRecycleBin();
+    openModal(
+      "Empty recycle bin",
+      `<p>Permanently remove <strong>${bin.itemCount}</strong> item(s) (${formatBytes(bin.totalBytes)}) from the recycle bin / trash.</p>
+       <p class="warning">This cannot be undone.</p>`,
+      [
+        { label: "Cancel", onClick: closeModal },
+        {
+          label: "Continue",
+          primary: true,
+          onClick: async () => {
+            setModalLoading("Checking…");
+            const dry = await emptyRecycleBin({ dryRun: true, confirm: false, confirmPhrase: "" });
+            openModal(
+              "Confirm empty recycle bin",
+              `<p>Remove ${dry.itemCount} item(s) (${formatBytes(dry.totalBytes)})?</p>
+               <label class="confirm-check"><input type="checkbox" id="recycle-reviewed" /> I reviewed this action</label>
+               <label>Type <strong>DELETE</strong><br/><input type="text" id="recycle-phrase" class="modal-input" autocomplete="off" /></label>`,
+              [
+                { label: "Cancel", onClick: closeModal },
+                {
+                  label: "Empty recycle bin",
+                  danger: true,
+                  onClick: async () => {
+                    const reviewed = (document.getElementById("recycle-reviewed") as HTMLInputElement).checked;
+                    const phrase = (document.getElementById("recycle-phrase") as HTMLInputElement).value.trim();
+                    if (!reviewed || phrase !== "DELETE") {
+                      alert("Check the box and type DELETE.");
+                      return;
+                    }
+                    setModalLoading("Emptying…");
+                    await emptyRecycleBin({ dryRun: false, confirm: true, confirmPhrase: "DELETE" });
+                    closeModal();
+                    showStatusBanner("Recycle bin emptied.", "success");
+                    await refreshInsightsAfterMaintenance();
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  } catch (e) {
+    alert(String(e));
+  }
+}
+
+async function startWSLCompact() {
+  if (isDemoMode) {
+    alert("Demo mode — WSL compact requires Windows desktop.");
+    return;
+  }
+  try {
+    const data = await fetchWSLDisks();
+    if (!data.supported || data.disks.length === 0) {
+      alert("No WSL/Docker VHDX disks found on this system.");
+      return;
+    }
+    const options = data.disks
+      .map((d) => `<option value="${escapeHtml(d.path)}">${escapeHtml(d.kind)} · ${formatBytes(d.sizeBytes)} · ${escapeHtml(d.path)}</option>`)
+      .join("");
+    openModal(
+      "Compact WSL / Docker disk",
+      `<p class="warning">Shuts down all WSL distros, then compacts the VHDX on disk. Docker Desktop will restart WSL on next use.</p>
+       <label>Select disk<br/><select id="wsl-disk-select" class="modal-input">${options}</select></label>`,
+      [
+        { label: "Cancel", onClick: closeModal },
+        {
+          label: "Continue",
+          primary: true,
+          onClick: async () => {
+            const sel = document.getElementById("wsl-disk-select") as HTMLSelectElement;
+            const path = sel.value;
+            setModalLoading("Dry-run…");
+            const dry = await compactWSLDisk({ path, dryRun: true, confirm: false, confirmPhrase: "" });
+            openModal(
+              "Confirm compact",
+              `<p>Compact <code>${escapeHtml(path)}</code> (${formatBytes(dry.bytesBefore)} on disk)?</p>
+               <label class="confirm-check"><input type="checkbox" id="wsl-reviewed" /> I accept WSL shutdown</label>
+               <label>Type <strong>DELETE</strong><br/><input type="text" id="wsl-phrase" class="modal-input" autocomplete="off" /></label>`,
+              [
+                { label: "Cancel", onClick: closeModal },
+                {
+                  label: "Compact disk",
+                  danger: true,
+                  onClick: async () => {
+                    const reviewed = (document.getElementById("wsl-reviewed") as HTMLInputElement).checked;
+                    const phrase = (document.getElementById("wsl-phrase") as HTMLInputElement).value.trim();
+                    if (!reviewed || phrase !== "DELETE") {
+                      alert("Check the box and type DELETE.");
+                      return;
+                    }
+                    setModalLoading("Compacting (may take a minute)…");
+                    const report = await compactWSLDisk({ path, dryRun: false, confirm: true, confirmPhrase: "DELETE" });
+                    closeModal();
+                    if (report.freedBytes > 0) {
+                      showStatusBanner(`Compacted VHDX — freed ${formatBytes(report.freedBytes)} on disk.`, "success");
+                    } else {
+                      showStatusBanner(
+                        "Compact finished — no file size change on disk. Docker prune may be needed first.",
+                        "warning"
+                      );
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  } catch (e) {
+    alert(String(e));
+  }
 }
 
 async function renderMaintenancePresets() {
@@ -651,7 +894,7 @@ function openDockerReviewModal(reclaimable: number, rawDf: string) {
     <p>Reclaim unused Docker images, stopped containers, networks, and build cache via <code>docker system prune -af</code>.</p>
     <p><strong>Estimated reclaimable:</strong> ${formatBytes(reclaimable)} (volumes are kept)</p>
     ${rawDf ? `<pre class="modal-pre">${escapeHtml(rawDf)}</pre>` : ""}
-    <p class="hint">This does not delete Docker Desktop data folders or VHDX disk images.</p>`;
+    <p class="hint">Prunes Docker layers only. On Windows, host disk space may not change until you compact the WSL/VHDX disk (Maintenance → Compact WSL).</p>`;
   openModal("Review Docker reclaim", body, [
     { label: "Cancel", onClick: closeModal },
     {
@@ -714,8 +957,18 @@ function showDockerConfirmModal() {
           });
           pendingDockerDryRun = null;
           closeModal();
-          await refreshJob();
-          alert(`Docker prune complete. Reclaimed about ${formatBytes(report.reclaimable)}.`);
+          await refreshInsightsAfterMaintenance();
+          if (report.noChange || report.reclaimable === 0) {
+            showStatusBanner(
+              "Docker prune ran but docker system df shows no reclaimable space removed. On Windows, compact the WSL/VHDX disk to free host space.",
+              "warning"
+            );
+          } else {
+            showStatusBanner(
+              `Docker prune reclaimed ${formatBytes(report.reclaimable)} (before ${formatBytes(report.beforeReclaimable || 0)} → after ${formatBytes(report.afterReclaimable || 0)}).`,
+              "success"
+            );
+          }
         } catch (e) {
           alert(String(e));
           showDockerConfirmModal();

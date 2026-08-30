@@ -31,9 +31,20 @@ Insights improve as you drill — scan `Users` or `Projects` to uncover nested `
 
 **Deletes always confirm:** single-file and bulk cleanup use review → dry-run → checkbox + type `DELETE` (no one-click browser prompt).
 
-Use **Maintenance presets** in Insights after a scan completes:
+Use **Maintenance** (Insights panel) after a scan — guided OS actions, not just "protected zone" warnings:
+
+| Action | What it does |
+|--------|----------------|
+| **Temp cleanup** | Review + delete user temp folders (maintenance zone) |
+| **Empty recycle bin** | Empties Recycle Bin / Trash (Windows, Linux, macOS) with confirm gate |
+| **Docker reclaim** | `docker system prune -af` — reports honest before/after `docker system df` |
+| **Compact WSL / Docker disk** | Windows only — shuts down WSL and compacts VHDX to free host disk space |
+| **Critical OS** | Read-only guidance — use Settings → Storage or `cleanmgr`, not file delete |
+
+**Maintenance presets** (legacy quick picks) remain below the hub:
+
 - **Dev reclaim** / **Temp cleanup** / **Downloads sweep** — filesystem candidates
-- **Docker reclaim** — CLI prune of unused images/containers/build cache (requires Docker on PATH + running daemon; never deletes volumes or Docker Desktop data folders)
+- **Docker reclaim** — see above; on Windows, prune layers inside VHDX without shrinking the file — use **Compact WSL** afterward
 
 Scan your user profile rather than `C:\` or `/` when cleaning up.
 
@@ -138,7 +149,11 @@ On Linux/macOS use `make build` if Make is available.
 | POST | `/api/scans/{id}/cleanup` | Bulk cleanup dry-run or execute `{ "paths": [...], "dryRun": true, "confirm": false, "confirmPhrase": "" }` |
 | GET | `/api/scans/{id}/maintenance-presets` | Maintenance preset definitions + matched paths |
 | GET | `/api/scans/{id}/docker` | Docker CLI status + `system df` summary (or unavailable) |
-| POST | `/api/scans/{id}/docker/prune` | Docker prune dry-run or execute `{ "dryRun": true }` / `{ "dryRun": false, "confirm": true, "confirmPhrase": "DELETE" }` (no `--volumes`) |
+| POST | `/api/scans/{id}/docker/prune` | Docker prune dry-run or execute `{ "dryRun": true }` / `{ "dryRun": false, "confirm": true, "confirmPhrase": "DELETE" }` (no `--volumes`; response includes `beforeReclaimable`, `afterReclaimable`, `noChange`) |
+| GET | `/api/maintenance/recycle` | Recycle bin / trash size (cross-platform) |
+| POST | `/api/maintenance/recycle/empty` | Empty recycle bin `{ "dryRun": true }` or execute with confirm + `DELETE` |
+| GET | `/api/wsl/disks` | List compactable WSL/Docker VHDX files (Windows) |
+| POST | `/api/wsl/compact` | Compact VHDX `{ "path": "...", "dryRun": true }` or execute with confirm + `DELETE` |
 
 ## CI and smoke tests
 
@@ -184,7 +199,7 @@ docker compose run --rm smoke          # CLI JSON scan
 docker compose run --rm smoke-api      # API smoke in Alpine
 ```
 
-**In-app Docker reclaim** (`docker-reclaim` preset under Insights → Maintenance presets) requires the `docker` CLI on PATH and a running daemon. It runs `docker system prune -af` (volumes are never pruned) and never deletes Docker data roots or VHDX files. If the daemon is down, Insights may still show the Desktop data folder as a non-deletable caution candidate.
+**In-app Docker reclaim** (Maintenance hub or `docker-reclaim` preset) requires the `docker` CLI on PATH and a running daemon. It runs `docker system prune -af` (volumes are never pruned) and reports reclaimed bytes from before/after `docker system df` only — if Docker reports no change, the UI warns that **host disk may not shrink on Windows until WSL/VHDX compact**. Docker data roots and VHDX files are never filesystem-deleted.
 
 ## Development workflow (SPECBOOT)
 

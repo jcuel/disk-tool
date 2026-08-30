@@ -35,10 +35,15 @@ type DiskUsage struct {
 
 // PruneReport is the result of a prune dry-run or execute.
 type PruneReport struct {
-	DryRun      bool   `json:"dryRun"`
-	Reclaimable int64  `json:"reclaimable"`
-	Output      string `json:"output,omitempty"`
-	Error       string `json:"error,omitempty"`
+	DryRun            bool   `json:"dryRun"`
+	Reclaimable       int64  `json:"reclaimable"`
+	BeforeReclaimable int64  `json:"beforeReclaimable,omitempty"`
+	AfterReclaimable  int64  `json:"afterReclaimable,omitempty"`
+	BeforeDf          string `json:"beforeDf,omitempty"`
+	AfterDf           string `json:"afterDf,omitempty"`
+	NoChange          bool   `json:"noChange,omitempty"`
+	Output            string `json:"output,omitempty"`
+	Error             string `json:"error,omitempty"`
 }
 
 // Available reports whether the docker binary is on PATH.
@@ -176,17 +181,24 @@ func Prune(ctx context.Context) (*PruneReport, error) {
 	if err != nil {
 		return &PruneReport{Output: out, Error: err.Error()}, err
 	}
-	reclaimed := before.Reclaimable
 	after := Detect(ctx)
-	if after.DaemonOK && before.DaemonOK {
-		diff := before.Reclaimable - after.Reclaimable
-		if diff > 0 {
-			reclaimed = diff
-		}
-	}
+	reclaimed, noChange := computeReclaimed(before.Reclaimable, after.Reclaimable)
 	return &PruneReport{
-		DryRun:      false,
-		Reclaimable: reclaimed,
-		Output:      out,
+		DryRun:            false,
+		Reclaimable:       reclaimed,
+		BeforeReclaimable: before.Reclaimable,
+		AfterReclaimable:  after.Reclaimable,
+		BeforeDf:          before.RawDF,
+		AfterDf:           after.RawDF,
+		NoChange:          noChange,
+		Output:            out,
 	}, nil
+}
+
+// computeReclaimed returns bytes removed per docker system df (never inflates with pre-prune estimate).
+func computeReclaimed(before, after int64) (reclaimed int64, noChange bool) {
+	if before > after {
+		return before - after, false
+	}
+	return 0, true
 }

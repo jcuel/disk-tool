@@ -201,7 +201,15 @@ export async function fetchDockerStatus(_id: string): Promise<{
 export async function dockerPrune(
   _id: string,
   req: { dryRun: boolean; confirm: boolean; confirmPhrase: string }
-): Promise<{ dryRun: boolean; reclaimable: number; output?: string; error?: string }> {
+): Promise<{
+  dryRun: boolean;
+  reclaimable: number;
+  beforeReclaimable?: number;
+  afterReclaimable?: number;
+  noChange?: boolean;
+  output?: string;
+  error?: string;
+}> {
   if (req.dryRun) {
     return {
       dryRun: true,
@@ -210,6 +218,39 @@ export async function dockerPrune(
         "Demo dry-run only — install disk-tool locally to run docker system prune -af (volumes kept).",
     };
   }
+  throw new Error(DEMO_ERROR);
+}
+
+export async function fetchRecycleBin(): Promise<{
+  path: string;
+  itemCount: number;
+  totalBytes: number;
+  supported: boolean;
+}> {
+  return { path: "/demo/trash", itemCount: 3, totalBytes: 524288000, supported: true };
+}
+
+export async function emptyRecycleBin(req: {
+  dryRun: boolean;
+  confirm: boolean;
+  confirmPhrase: string;
+}): Promise<{ dryRun: boolean; itemCount: number; totalBytes: number }> {
+  if (req.dryRun) {
+    return { dryRun: true, itemCount: 3, totalBytes: 524288000 };
+  }
+  throw new Error(DEMO_ERROR);
+}
+
+export async function fetchWSLDisks(): Promise<{ supported: boolean; disks: { path: string; sizeBytes: number; kind: string }[] }> {
+  return { supported: false, disks: [] };
+}
+
+export async function compactWSLDisk(_req: {
+  path: string;
+  dryRun: boolean;
+  confirm: boolean;
+  confirmPhrase: string;
+}): Promise<{ dryRun: boolean; path: string; bytesBefore: number; bytesAfter: number; freedBytes: number; supported: boolean }> {
   throw new Error(DEMO_ERROR);
 }
 

@@ -35,6 +35,7 @@ Include:
 In scope:
 
 - `disk-tool` server/API (localhost binding, path validation, scan/delete/cleanup flows)
+- **Maintenance workflows** — recycle bin empty, WSL/VHDX compact (Windows), Docker CLI prune
 - Docker image and CI-supplied artifacts
 - Dependency vulnerabilities surfaced by CI (Trivy)
 - Release binaries scanned by CI (ClamAV)
@@ -75,6 +76,20 @@ A clean ClamAV result does not guarantee Defender will stay silent (different en
 4. For production deployments, plan **Authenticode signing** for Windows installers (reduces SmartScreen warnings; tracked as future work).
 
 Do not disable Defender permanently; use “Allow on device” only after verifying the download source is GitHub Releases for this repository.
+
+## Maintenance actions and safety
+
+disk-tool v1.6+ exposes **OS-level maintenance** APIs separate from scan-scoped file delete:
+
+| Action | API | Risk notes |
+|--------|-----|------------|
+| Empty recycle bin | `POST /api/maintenance/recycle/empty` | Permanently removes trashed files; requires typed `DELETE` confirm |
+| Docker prune | `POST /api/scans/{id}/docker/prune` | Runs `docker system prune -af` (no volumes); does not delete VHDX files |
+| WSL/VHDX compact | `POST /api/wsl/compact` | Windows only; shuts down all WSL distros; may require elevation for `Optimize-VHD` / diskpart |
+
+**Protected paths** (Windows, Program Files, system roots) remain non-deletable via filesystem cleanup. The Maintenance hub directs users to OS tools (`cleanmgr`, Settings → Storage) for critical OS space — not disk-tool delete.
+
+Report issues where maintenance actions bypass confirm gates, touch paths outside the stated scope, or bind/listen beyond localhost.
 
 ### Submitting an NSIS false positive to Microsoft
 
