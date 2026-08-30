@@ -263,6 +263,63 @@ jobs:
         if: steps.trivy-fs.outcome == 'failure' || steps.trivy-image.outcome == 'failure'
         run: exit 1
 
+  clamav:
+    name: Security — ClamAV
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.25.13"
+          cache-dependency-path: go.sum
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build frontend and embed
+        run: |
+          cd web && npm ci && npm run build
+          rm -rf cmd/disk-tool/static/*
+          cp -r web/dist/* cmd/disk-tool/static/
+
+      - name: Build Linux and Windows binaries
+        run: |
+          mkdir -p bin
+          go build -ldflags="-s -w" -o bin/disk-tool ./cmd/disk-tool
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 \
+            go build -ldflags="-s -w" -o bin/disk-tool-windows-amd64.exe ./cmd/disk-tool
+
+      - name: Cache ClamAV database
+        uses: actions/cache@v4
+        with:
+          path: /var/lib/clamav
+          key: clamav-db-v1
+          restore-keys: clamav-db-
+
+      - name: Install ClamAV and update signatures
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clamav
+          sudo freshclam || true
+
+      - name: Scan binaries
+        env:
+          CLAMAV_REPORT: clamav-report.txt
+        run: bash scripts/clamav-scan.sh bin/
+
+      - name: Upload ClamAV report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: clamav-report-pr-${{ github.event.pull_request.number || github.run_number }}
+          path: clamav-report.txt
+          if-no-files-found: ignore
+          retention-days: 14
+
   site-build:
     name: Site — landing + demo build
     runs-on: ubuntu-latest

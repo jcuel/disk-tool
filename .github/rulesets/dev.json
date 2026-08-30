@@ -29,7 +29,8 @@
           { "context": "Windows — unit + API smoke" },
           { "context": "Linux — Docker smoke" },
           { "context": "Linux — Cypress E2E" },
-          { "context": "Security — Trivy" }
+          { "context": "Security — Trivy" },
+          { "context": "Security — ClamAV" }
         ]
       }
     },

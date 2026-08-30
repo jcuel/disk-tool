@@ -181,9 +181,55 @@ jobs:
           name: ${{ matrix.artifact }}
           path: dist/desktop/*
 
+  clamav-scan:
+    name: Security — ClamAV release artifacts
+    needs: [build, build-desktop]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          pattern: disk-tool-*
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          pattern: desktop-*
+          merge-multiple: true
+
+      - name: Cache ClamAV database
+        uses: actions/cache@v4
+        with:
+          path: /var/lib/clamav
+          key: clamav-db-v1
+          restore-keys: clamav-db-
+
+      - name: Install ClamAV and update signatures
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clamav
+          sudo freshclam || true
+
+      - name: Scan release artifacts
+        env:
+          CLAMAV_REPORT: clamav-report.txt
+        run: bash scripts/clamav-scan.sh artifacts/
+
+      - name: Upload ClamAV report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: clamav-report-release-${{ github.run_number }}
+          path: clamav-report.txt
+          if-no-files-found: ignore
+          retention-days: 90
+
   publish-release:
     name: Publish GitHub Release
-    needs: [build, build-desktop]
+    needs: [build, build-desktop, clamav-scan]
     runs-on: ubuntu-latest
     permissions:
       contents: write

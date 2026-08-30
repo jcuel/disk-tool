@@ -37,12 +37,44 @@ In scope:
 - `disk-tool` server/API (localhost binding, path validation, scan/delete/cleanup flows)
 - Docker image and CI-supplied artifacts
 - Dependency vulnerabilities surfaced by CI (Trivy)
+- Release binaries scanned by CI (ClamAV)
 
 Out of scope:
 
 - Issues requiring physical access to the machine running disk-tool
 - Social engineering
 - Denial-of-service against a single-user localhost instance (unless exploitable remotely)
+
+## Windows Defender / SmartScreen false positives
+
+**disk-tool release builds are not malware.** Windows Defender and SmartScreen sometimes flag our installers or `.exe` files because of how they are built and distributed, not because they contain a virus.
+
+Common triggers for **unsigned** desktop software:
+
+| Factor | disk-tool |
+|--------|-----------|
+| **No code signing** | Installers and binaries are not Authenticode-signed yet (no EV/OV cert). Unknown publisher = low reputation score. |
+| **NSIS installer** | Tauri bundles Windows releases as NSIS `.exe` installers — a frequent heuristic target for consumer AV. |
+| **Stripped Go sidecar** | Release builds use `-ldflags="-s -w"` (no debug symbols). Some engines treat stripped static binaries as suspicious. |
+| **Embedded web UI** | The Go binary embeds the full Vite frontend — large, unusual PE layout vs. typical CLI tools. |
+| **Sidecar spawn pattern** | The desktop shell launches a child process that binds `127.0.0.1` and serves HTTP — behavior similar to droppers/launchers in heuristic models. |
+
+**What we do in CI**
+
+- **Trivy** — dependency CVEs (filesystem + Docker image)
+- **ClamAV** — malware scan on Linux + Windows cross-compiled binaries (every PR) and on full release artifacts (installers included) before publish
+- **govulncheck** — Go stdlib/module vulnerabilities
+
+A clean ClamAV result does not guarantee Defender will stay silent (different engines), but it confirms our build pipeline is not shipping known malware signatures.
+
+**If Defender quarantines disk-tool**
+
+1. Check the file hash against the [latest Release](https://github.com/jcuel/disk-tool/releases/latest) artifact you downloaded.
+2. Review the CI ClamAV report attached to that release workflow run.
+3. Report a false positive to Microsoft if you are satisfied: [Submit a file for analysis](https://www.microsoft.com/en-us/wdsi/filesubmission).
+4. For production deployments, plan **Authenticode signing** for Windows installers (reduces SmartScreen warnings; tracked as future work).
+
+Do not disable Defender permanently; use “Allow on device” only after verifying the download source is GitHub Releases for this repository.
 
 ## Safe harbor
 

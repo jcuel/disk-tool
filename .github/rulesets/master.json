@@ -33,6 +33,7 @@
           { "context": "Linux — Docker smoke" },
           { "context": "Linux — Cypress E2E" },
           { "context": "Security — Trivy" },
+          { "context": "Security — ClamAV" },
           { "context": "Policy — master is maintainer-only" }
         ]
       }
