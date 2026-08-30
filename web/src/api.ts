@@ -129,11 +129,61 @@ export interface DockerDiskUsage {
 export interface DockerPruneReport {
   dryRun: boolean;
   reclaimable: number;
+  beforeReclaimable?: number;
+  afterReclaimable?: number;
+  beforeDf?: string;
+  afterDf?: string;
+  noChange?: boolean;
   output?: string;
   error?: string;
 }
 
 export interface DockerPruneRequest {
+  dryRun: boolean;
+  confirm: boolean;
+  confirmPhrase: string;
+}
+
+export interface RecycleBinInfo {
+  path: string;
+  itemCount: number;
+  totalBytes: number;
+  supported: boolean;
+  error?: string;
+}
+
+export interface RecycleEmptyReport {
+  dryRun: boolean;
+  itemCount: number;
+  totalBytes: number;
+  error?: string;
+}
+
+export interface RecycleEmptyRequest {
+  dryRun: boolean;
+  confirm: boolean;
+  confirmPhrase: string;
+}
+
+export interface WSLDisk {
+  path: string;
+  sizeBytes: number;
+  kind: string;
+}
+
+export interface WSLCompactReport {
+  dryRun: boolean;
+  path: string;
+  bytesBefore: number;
+  bytesAfter: number;
+  freedBytes: number;
+  output?: string;
+  error?: string;
+  supported: boolean;
+}
+
+export interface WSLCompactRequest {
+  path: string;
   dryRun: boolean;
   confirm: boolean;
   confirmPhrase: string;
@@ -206,6 +256,10 @@ export const cancelScan = impl.cancelScan;
 export const fetchMaintenancePresets = impl.fetchMaintenancePresets;
 export const fetchDockerStatus = impl.fetchDockerStatus;
 export const dockerPrune = impl.dockerPrune;
+export const fetchRecycleBin = impl.fetchRecycleBin;
+export const emptyRecycleBin = impl.emptyRecycleBin;
+export const fetchWSLDisks = impl.fetchWSLDisks;
+export const compactWSLDisk = impl.compactWSLDisk;
 export const reanalyzeInsights = impl.reanalyzeInsights;
 export const findDuplicates = impl.findDuplicates;
 export const connectEvents = impl.connectEvents;

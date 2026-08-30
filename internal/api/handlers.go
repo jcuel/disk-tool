@@ -48,6 +48,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/scans/{id}/cleanup", s.handleCleanup)
 	s.registerSafetyRoutes(mux)
 	s.registerDockerRoutes(mux)
+	s.registerMaintenanceRoutes(mux)
 	if s.static != nil {
 		mux.Handle("/", s.static)
 	}

@@ -615,3 +615,122 @@ tr.clickable:hover {
   color: #f85149;
   font-size: 0.9rem;
 }
+
+/* Maintenance hub */
+.maintenance-hub {
+  margin: 0.75rem 0 1rem;
+}
+
+.maint-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.maint-card {
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+
+.maint-card h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+}
+
+.maint-card p {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.maint-card-readonly {
+  border-style: dashed;
+}
+
+.maint-card .secondary-btn {
+  width: 100%;
+}
+
+/* Desktop tabbed layout (Tauri only) */
+body.desktop-app {
+  height: 100vh;
+  overflow: hidden;
+}
+
+body.desktop-app #app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+body.desktop-app header,
+body.desktop-app .controls,
+body.desktop-app .disk-summary {
+  flex-shrink: 0;
+}
+
+body.desktop-app .tab-bar {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0 1.5rem;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+body.desktop-app .tab-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+body.desktop-app .tab-btn.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+body.desktop-app .layout {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: block;
+  padding-top: 0.5rem;
+}
+
+body.desktop-app .desktop-tab-panel {
+  display: none;
+  height: 100%;
+  overflow: auto;
+}
+
+body.desktop-app .desktop-tab-panel.desktop-tab-active {
+  display: block;
+}
+
+body.desktop-app[data-active-tab="browse"] .layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "tree charts";
+  grid-template-rows: 1fr;
+  height: 100%;
+}
+
+body.desktop-app[data-active-tab="browse"] .tree-panel,
+body.desktop-app[data-active-tab="browse"] .charts-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+body.desktop-app[data-active-tab="files"] .files-panel,
+body.desktop-app[data-active-tab="insights"] .insights-panel {
+  height: 100%;
+}

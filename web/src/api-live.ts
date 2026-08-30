@@ -8,8 +8,14 @@ import type {
   DuplicateGroup,
   InsightsReport,
   MaintenancePresetMatch,
+  RecycleBinInfo,
+  RecycleEmptyReport,
+  RecycleEmptyRequest,
   ScanEvent,
   ScanJob,
+  WSLCompactReport,
+  WSLCompactRequest,
+  WSLDisk,
 } from "./api";
 
 const DEFAULT_DRILL_DEPTH = 5;
@@ -136,6 +142,44 @@ export async function dockerPrune(id: string, req: DockerPruneRequest): Promise<
   if (!r.ok) {
     const e = await r.json().catch(() => ({}));
     throw new Error((e as { error?: string }).error || "docker prune failed");
+  }
+  return r.json();
+}
+
+export async function fetchRecycleBin(): Promise<RecycleBinInfo> {
+  const r = await fetch("/api/maintenance/recycle");
+  if (!r.ok) throw new Error("recycle inspect failed");
+  return r.json();
+}
+
+export async function emptyRecycleBin(req: RecycleEmptyRequest): Promise<RecycleEmptyReport> {
+  const r = await fetch("/api/maintenance/recycle/empty", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error((e as { error?: string }).error || "empty recycle failed");
+  }
+  return r.json();
+}
+
+export async function fetchWSLDisks(): Promise<{ supported: boolean; disks: WSLDisk[] }> {
+  const r = await fetch("/api/wsl/disks");
+  if (!r.ok) throw new Error("wsl disks failed");
+  return r.json();
+}
+
+export async function compactWSLDisk(req: WSLCompactRequest): Promise<WSLCompactReport> {
+  const r = await fetch("/api/wsl/compact", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error((e as { error?: string }).error || "wsl compact failed");
   }
   return r.json();
 }

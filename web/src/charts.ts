@@ -207,3 +207,9 @@ export function pct(size: number, parent: number): string {
   if (parent <= 0) return "0";
   return ((size / parent) * 100).toFixed(1);
 }
+
+export function resizeCharts(): void {
+  treemapChart?.resize();
+  barChart?.resize();
+  diskPieChart?.resize();
+}

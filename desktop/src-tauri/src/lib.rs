@@ -128,7 +128,7 @@ pub fn run() {
 
                 WebviewWindowBuilder::new(&handle, "main", WebviewUrl::External(parsed))
                     .title("disk-tool")
-                    .inner_size(1280.0, 800.0)
+                    .inner_size(1280.0, 900.0)
                     .resizable(true)
                     .on_navigation(|url| allows_localhost(url))
                     .build()
