@@ -76,6 +76,39 @@ A clean ClamAV result does not guarantee Defender will stay silent (different en
 
 Do not disable Defender permanently; use “Allow on device” only after verifying the download source is GitHub Releases for this repository.
 
+### Submitting an NSIS false positive to Microsoft
+
+When Defender flags the **Tauri NSIS installer** (`*_x64-setup.exe` from `desktop/src-tauri/target/release/bundle/nsis/`), submit it as a software developer at [Microsoft WDSI file submission](https://www.microsoft.com/en-us/wdsi/filesubmission).
+
+**Before submitting**
+
+1. Build or download the exact NSIS `.exe` (Release workflow artifact `desktop-windows`, or local `./build.ps1 -Desktop` then `npm run tauri build` in `desktop/`).
+2. Confirm the release workflow **Security — ClamAV release artifacts** job passed and download `clamav-report-release-*` from that run.
+3. Record SHA-256:
+
+   ```powershell
+   Get-FileHash -Algorithm SHA256 .\disk-tool_*_x64-setup.exe
+   ```
+
+   ```bash
+   sha256sum disk-tool_*_x64-setup.exe
+   ```
+
+**Submission fields**
+
+| Field | Value |
+|-------|-------|
+| Role | Software developer |
+| File | NSIS setup `.exe` (not the CLI binary alone) |
+| Product name | disk-tool |
+| Description | Open-source disk usage analyzer; Tauri 2 desktop shell with embedded Go sidecar; unsigned build — heuristic false positive |
+| Publisher | jcuel — https://github.com/jcuel/disk-tool |
+| Download URL | https://github.com/jcuel/disk-tool/releases/latest (after publish) |
+
+**Optional:** upload the same file to [VirusTotal](https://www.virustotal.com) for a public hash record.
+
+Maintainers: after Microsoft clears the file, cut a tagged release so users fetch the updated reputation via GitHub Releases. Long-term mitigation is **Authenticode signing** for Windows installers.
+
 ## Safe harbor
 
 We support good-faith security research on this repository. Do not access data outside your own systems or exfiltrate user data when testing.

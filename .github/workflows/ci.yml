@@ -283,6 +283,7 @@ jobs:
       - name: Build frontend and embed
         run: |
           cd web && npm ci && npm run build
+          cd ..
           rm -rf cmd/disk-tool/static/*
           cp -r web/dist/* cmd/disk-tool/static/
 
