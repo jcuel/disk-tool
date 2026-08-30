@@ -10,13 +10,19 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"runtime"
+	"strconv"
+	"strings"
+	"syscall"
 	"time"
 
 	"github.com/jcuel/disk-tool/internal/api"
 	"github.com/jcuel/disk-tool/internal/model"
 	"github.com/jcuel/disk-tool/internal/scanner"
 )
+
+const readyPrefix = "disk-tool-ready port="
 
 func main() {
 	if len(os.Args) < 2 {
@@ -37,13 +43,14 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Fprintf(os.Stderr, "Usage:\n  disk-tool serve [--port 8080] [--no-open]\n  disk-tool scan <path> [--json] [--full]\n  disk-tool version\n")
+	fmt.Fprintf(os.Stderr, "Usage:\n  disk-tool serve [--port 8080] [--no-open] [--ready-stdout]\n  disk-tool scan <path> [--json] [--full]\n  disk-tool version\n")
 }
 
 func runServe(args []string) {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
-	port := fs.Int("port", 8080, "HTTP port")
+	port := fs.Int("port", 8080, "HTTP port (0 = OS-assigned)")
 	noOpen := fs.Bool("no-open", false, "do not open browser")
+	readyStdout := fs.Bool("ready-stdout", false, "emit disk-tool-ready line on stdout when listening")
 	_ = fs.Parse(args)
 
 	store := api.NewStore()
@@ -52,20 +59,62 @@ func runServe(args []string) {
 		log.Fatalf("static assets: %v", err)
 	}
 	srv := api.NewServer(store, static)
-	addr := fmt.Sprintf("127.0.0.1:%d", *port)
-	url := "http://" + addr
 
+	addr := fmt.Sprintf("127.0.0.1:%d", *port)
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	actualPort := ln.Addr().(*net.TCPAddr).Port
+	url := fmt.Sprintf("http://127.0.0.1:%d", actualPort)
+
+	if *readyStdout {
+		fmt.Fprintf(os.Stdout, "%s%d\n", readyPrefix, actualPort)
+		_ = os.Stdout.Sync()
+	}
+
 	log.Printf("disk-tool listening on %s", url)
 	if !*noOpen {
 		go openBrowser(url)
 	}
-	if err := http.Serve(ln, srv.Handler()); err != nil {
-		log.Fatal(err)
+
+	httpServer := &http.Server{Handler: srv.Handler()}
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- httpServer.Serve(ln)
+	}()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
+	select {
+	case sig := <-sigCh:
+		log.Printf("disk-tool shutting down (%v)", sig)
+	case err := <-errCh:
+		if err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+		return
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := httpServer.Shutdown(ctx); err != nil {
+		log.Printf("shutdown: %v", err)
+	}
+}
+
+func parseReadyPort(line string) (int, bool) {
+	line = strings.TrimSpace(line)
+	if !strings.HasPrefix(line, readyPrefix) {
+		return 0, false
+	}
+	port, err := strconv.Atoi(strings.TrimPrefix(line, readyPrefix))
+	if err != nil || port <= 0 {
+		return 0, false
+	}
+	return port, true
 }
 
 func runScan(args []string) {
