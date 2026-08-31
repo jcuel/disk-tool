@@ -295,7 +295,7 @@ jobs:
             go build -ldflags="-s -w" -o bin/disk-tool-windows-amd64.exe ./cmd/disk-tool
 
       - name: Cache ClamAV database
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: /var/lib/clamav
           key: clamav-db-v1
