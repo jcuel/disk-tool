@@ -1,0 +1,14 @@
+{
+  "name": "disk-tool",
+  "install": "make build",
+  "terminals": [
+    {
+      "name": "disk-tool serve",
+      "command": "./bin/disk-tool serve --port 8080 --no-open",
+      "description": "Local disk-tool web UI + API on http://127.0.0.1:8080"
+    }
+  ],
+  "ports": [
+    { "port": 8080 }
+  ]
+}
